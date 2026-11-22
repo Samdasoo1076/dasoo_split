@@ -1,0 +1,8 @@
+======================================================================
+checking choc-split-60-left.kicad_pcb
+  pads=156 tracks=226 vias=38 nets=50
+  OK: all checks passed
+======================================================================
+checking choc-split-60-right.kicad_pcb
+  pads=168 tracks=237 vias=51 nets=54
+  OK: all checks passed

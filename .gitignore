@@ -1,0 +1,11 @@
+*.kicad_prl
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*-backups/
+fp-info-cache
+__pycache__/
+*.pyc
+_autosave-*
+*.gbr
+*.drl
+*.zip
