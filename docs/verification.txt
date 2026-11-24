@@ -1,15 +1,34 @@
 ======================================================================
 checking choc-split-60-left.kicad_pcb
-  pads=171 tracks=222 vias=39 nets=55
+  pads=171 tracks=241 vias=39 nets=55
+  stabilizers=2 holes=8
+    SW23  2.25u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 9.49, 74.90)
+    SW33  2.00u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 88.07, 93.95)
   OK: all checks passed
 ======================================================================
 checking choc-split-60-right.kicad_pcb
-  pads=184 tracks=282 vias=58 nets=58
+  pads=184 tracks=295 vias=56 nets=58
+  stabilizers=3 holes=12
+    SW23  2.25u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 128.56, 55.85)
+    SW33  2.25u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 38.13, 93.95)
+    SW8   2.00u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 130.94, 17.75)
   OK: all checks passed
-rev 2026-11-24 (4) - left top-left key is Esc (label/firmware only, the PCB is
-byte identical); right number row gains a 1 u ` left of a 1 u BSpc; right rows
-3 and 4 move 0.25 u left so Del and Right end at 8.5 u too and all five rows
-stop on one line.  Right board outline re-fitted (still 181 x 130 mm, 4.76 mm
-further left), mounting hole 6 moved from the right strip into the bottom band.
-Matrix 5 x 9 per half unchanged, right switches 37 -> 38, switches 70 -> 71,
-keycaps 1u 57 -> 59 and 2u 2 -> 1.
+
+rev 2026-11-24 (5) - the 2 u backspace is back: the right number row moves 1.0 u
+left (start -0.5 u) and carries 7 8 9 0 - = + 1 u ` + 2 u BSpc, still ending at
+8.5 u.  Right row 4 moves another 0.25 u left (start 0.25 u) so RCtrl ends at
+5.0 u and exactly 0.5 u of empty PCB separates it from Left at 5.5 u; the left
+space bar moves 0.5 u right (4.25 - 6.25 u) for the same gap after LAlt.
+Cherry MX PCB mount stabilizer holes on every 2 u+ key (20 NPTH holes):
+  pattern 3.048 mm positioning hole at cy - 6.985 and 3.9878 mm mounting hole
+  at cy + 8.225, both at cx +- 11.938 mm (keyswitch-kicad-library
+  Stabilizer_Cherry_MX_2.00u, which serves 2.00 - 2.75 u keys)
+  left:  LShift 2.25u, Space 2.00u   = 2 keys / 8 holes
+  right: BSpc 2.00u, Enter 2.25u, Space 2.25u = 3 keys / 12 holes
+  nearest copper to any of them 0.350 mm (row bus runs 0.5 mm from the hole
+  edge, 0.375 mm of copper); design clearance is 0.20 mm, so 0 violations.
+  The F.Cu row bus steps 45 degrees around the mounting hole of every wide key
+  and the maze router treats all 20 holes as keepouts on both layers.
+Tracks 222 -> 241 (left) / 282 -> 295 (right), vias 58 -> 56 (right, fewer
+layer changes once the number row's backspace moved back to 2 u); matrix
+5 x 9 per half, 71 switches and 72 diodes unchanged.
