@@ -11,6 +11,8 @@ checks, for each half:
   4. Edge.Cuts forms a single closed loop and all copper is inside
   5. all tracks are 0/45/90 degrees and respect the minimum width
   6. a GND zone exists on both copper layers
+  7. every switch of 2 u and wider carries the four holes of the Cherry MX PCB
+     mount stabilizer (2.00 u pattern) and no copper comes near them
 
 Usage:  python3 scripts/verify_pcb.py [pcb/*.kicad_pcb ...]
 """
@@ -25,6 +27,13 @@ EDGE_CLEAR = 0.30     # copper to board edge
 HOLE_CLEAR = 0.20     # copper to NPTH hole edge
 MIN_W = 0.25          # thinnest track we accept
 TOL = 1e-6
+
+# Cherry MX PCB mount stabilizer, 2.00 u hole pattern (the same holes serve the
+# 2.25 u keys): 11.938 mm beside the key centre, a 3.048 mm positioning hole
+# behind the switch and a 3.9878 mm mounting hole towards the front.
+STAB_MIN_U = 2.0
+STAB_X = 11.938
+STAB_PATTERN = ((3.048, -6.985), (3.9878, 8.225))
 
 # --------------------------------------------------------------------- parser
 TOKEN = re.compile(r'\(|\)|"(?:[^"\\]|\\.)*"|[^\s()"]+')
@@ -556,6 +565,63 @@ def check_matrix(b):
     return errs
 
 
+def check_stab(b):
+    """Stabilizer holes of the wide keys and the copper clearance around them.
+
+    A 2 u (or wider) key is useless without a stabilizer, so every switch that
+    wide must carry the four NPTH holes of the standard Cherry MX PCB mount
+    pattern, and neither track, via nor pad may come inside the clearance.
+    Returns ``(errors, report)`` where report is one tuple per stabilizer.
+    """
+    errs = []
+    holes = [p for p in b.pads if p.shape == "hole"]
+    groups = defaultdict(list)
+    for p in b.pads:
+        if p.fp and "SW_Hotswap_Kailh_Choc_V1_" in p.fp:
+            groups[(p.ref, p.fp)].append(p)
+    copper = [p for p in b.pads if p.shape != "hole" and p.net] + b.tracks + b.vias
+    report = []
+    for (ref, fname), pads in sorted(groups.items()):
+        m = re.search(r"_([0-9.]+)u$", fname)
+        if not m or float(m.group(1)) < STAB_MIN_U - 1e-9:
+            continue
+        width = float(m.group(1))
+        centre = [p for p in pads if p.shape == "hole" and abs(p.w - 5.05) < 0.01]
+        if len(centre) != 1:
+            errs.append("%s: cannot locate the switch centre hole" % ref)
+            continue
+        cx, cy = centre[0].x, centre[0].y
+        found = 0
+        worst = None
+        for sx in (-1, 1):
+            for drill, dy in STAB_PATTERN:
+                ex, ey = cx + sx * STAB_X, cy + dy
+                near = [h for h in holes
+                        if math.hypot(h.x - ex, h.y - ey) < 0.01
+                        and abs(h.w - drill) < 0.01]
+                if not near:
+                    errs.append("%s (%.2fu): no %.4f mm hole at (%.2f, %.2f)"
+                                % (ref, width, drill, ex, ey))
+                    continue
+                found += 1
+                h = near[0]
+                dmin, who = 1e9, None
+                for c in copper:
+                    if not bbox_overlap(h.bbox_expanded(1.5), c.bbox_expanded(1.5)):
+                        continue
+                    d = item_dist(c, h, None)
+                    if d < dmin:
+                        dmin, who = d, c
+                if dmin < CLEAR - 0.001:
+                    errs.append("%s: copper %.3f mm from the %.4f mm stab hole at "
+                                "(%.2f, %.2f) [%s]"
+                                % (ref, dmin, drill, h.x, h.y, _tag(who)))
+                if worst is None or dmin < worst[0]:
+                    worst = (dmin, drill, h, who)
+        report.append((ref, width, found, worst))
+    return errs, report
+
+
 def check_zones(b):
     errs = []
     zl = [(l, n) for (l, n, pts) in b.zones if n == "GND"]
@@ -594,9 +660,19 @@ def main(argv):
         errs += check_matrix(b)
         errs += check_zones(b)
         errs += check_angles(b)
+        stab_errs, stab = check_stab(b)
+        errs += stab_errs
         n_pads = len([p for p in b.pads if p.shape != "hole"])
         print("  pads=%d tracks=%d vias=%d nets=%d" %
               (n_pads, len(b.tracks), len(b.vias), len(b.nets)))
+        n_stab = sum(1 for r in stab)
+        print("  stabilizers=%d holes=%d" % (n_stab, 4 * n_stab))
+        for ref, width, found, worst in stab:
+            line = "    %-5s %.2fu: %d/4 holes" % (ref, width, found)
+            if worst:
+                line += ", nearest copper %.3f mm (%.4f mm hole at %.2f, %.2f)" % (
+                    worst[0], worst[1], worst[2].x, worst[2].y)
+            print(line)
         if errs:
             rc = 1
             print("  %d problem(s):" % len(errs))

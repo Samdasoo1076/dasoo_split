@@ -76,7 +76,8 @@ def main():
     for name, fn in (("TRRS_PJ-320A", parts.trrs_pj320a),
                      ("SW_Reset_6mm", parts.reset_switch),
                      ("RotaryEncoder_EC11", parts.rotary_ec11),
-                     ("MountingHole_M2", parts.mount_hole_m2)):
+                     ("MountingHole_M2", parts.mount_hole_m2),
+                     ("Stabilizer_Cherry_MX_2.00u", parts.stabilizer_cherry_mx_2u)):
         sp = fn()
         specs.append((name, sp))
     for name, sp in specs:

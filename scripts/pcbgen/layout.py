@@ -28,6 +28,19 @@ key units (19.05 mm); matrix row is the row index in the table.
     -0.5 u, row 4 at 0.5 u), so ``Del`` and ``Right`` end at 8.5 u as well:
     all five rows now stop on one straight vertical line, and
     ``Left/Down/Right`` sit exactly under ``RShift/Up/Del``
+
+2026-11 fourth revision (user request):
+  * the 2 u backspace comes back: instead of splitting ``BSpc`` into
+    `` ` `` + 1 u, the right number row moves 1.0 u left (row 0 now starts at
+    -0.5 u) and carries `7 8 9 0 - =` + 1 u `` ` `` + a full 2 u ``BSpc``,
+    still ending on 8.5 u
+  * the right bottom row moves another 0.25 u left (row 4 starts at 0.25 u),
+    so ``RCtrl`` (3.75 - 5.0 u) leaves exactly 0.5 u of empty PCB before
+    ``Left`` (5.5 u)
+  * the left bottom row's ``Space`` moves 0.5 u right (4.25 - 6.25 u) to give
+    the same 0.5 u of PCB between ``LAlt`` and the space bar
+  * every key of 2 u and wider gets the four holes of the Cherry MX PCB mount
+    stabilizer (2.00 u pattern) -- see :func:`stab_holes`
 """
 from .geom import U, ROW0_Y, ROW_PITCH
 
@@ -48,9 +61,13 @@ LEFT_ROWS = [
     [("PgUp", MACRO_X, 1, 7),
      ("LShift", 0, 2.25, 0), ("Z", 2.25, 1, 1), ("X", 3.25, 1, 2), ("C", 4.25, 1, 3),
      ("V", 5.25, 1, 4), ("B", 6.25, 1, 5)],
+    # bottom: LCtrl 1.25 + LWin 1.25 + LAlt 1.25 end at 3.75 u, then 0.5 u of
+    # empty PCB, then the 2 u space bar at 4.25 - 6.25 u (0.5 u further right
+    # than before; ``B`` above ends at 7.25 u, so the board outline is
+    # unchanged and the space bar still sits well inside it).
     [("PgDn", MACRO_X, 1, 7),
      ("LCtrl", 0, 1.25, 0), ("LWin", 1.25, 1.25, 1), ("LAlt", 2.5, 1.25, 2),
-     ("Space", 3.75, 2.0, 3)],
+     ("Space", 4.25, 2.0, 3)],
 ]
 
 # Right half.  Every row starts at its own x so that the finished board keeps
@@ -72,10 +89,20 @@ LEFT_ROWS = [
 #   * 1 u `` ` `` on the right of ``=``, the 2 u backspace becomes 1 u
 #   * rows 3 and 4 move 0.25 u left, so ``Del`` / ``Right`` end at 8.5 u too
 #     and the arrows land under ``RShift`` / ``Up`` / ``Del``
+#
+# 2026-11 fourth revision (user request):
+#   * the 2 u backspace is back: row 0 moves 1.0 u left (start -0.5 u) and
+#     carries `7 8 9 0 - =` + 1 u `` ` `` + 2 u ``BSpc``, so the row still ends
+#     at 8.5 u and ``7`` sits right after the left half's ``6`` (which is why
+#     this row is 1 u left of the ANSI position the letter rows keep)
+#   * row 4 moves 0.25 u left again (start 0.25 u): ``RCtrl`` ends at 5.0 u
+#     and exactly 0.5 u of empty PCB separates it from ``Left`` at 5.5 u
 RIGHT_ROWS = [
-    # 0.5 u start: 7 8 9 0 - = | ` | BSpc 1 u -> right edge 8.5 u
-    [("7", 0.5, 1, 0), ("8", 1.5, 1, 1), ("9", 2.5, 1, 2), ("0", 3.5, 1, 3),
-     ("-", 4.5, 1, 4), ("=", 5.5, 1, 5), ("`", 6.5, 1, 6), ("BSpc", 7.5, 1.0, 7)],
+    # -0.5 u start: 7 8 9 0 - = ` (1 u each) + BSpc 2 u -> right edge 8.5 u.
+    # The row sits 1.0 u further left than the tab row so that backspace keeps
+    # its full 2 u width instead of being split into ` + 1 u.
+    [("7", -0.5, 1, 0), ("8", 0.5, 1, 1), ("9", 1.5, 1, 2), ("0", 2.5, 1, 3),
+     ("-", 3.5, 1, 4), ("=", 4.5, 1, 5), ("`", 5.5, 1, 6), ("BSpc", 6.5, 2.0, 7)],
     # 0.0 u start, \\ 1.5 u (same width as the left half's Tab) -> 8.5 u
     [("Y", 0, 1, 0), ("U", 1, 1, 1), ("I", 2, 1, 2), ("O", 3, 1, 3),
      ("P", 4, 1, 4), ("[", 5, 1, 5), ("]", 6, 1, 6), ("\\", 7, 1.5, 7)],
@@ -86,9 +113,9 @@ RIGHT_ROWS = [
     [("B", -0.5, 1, 0), ("N", 0.5, 1, 1), ("M", 1.5, 1, 2),
      (",", 2.5, 1, 3), (".", 3.5, 1, 4), ("/", 4.5, 1, 5),
      ("RShift", 5.5, 1.0, 6), ("Up", 6.5, 1, 7), ("Del", 7.5, 1, 8)],
-    # bottom: 0.5 + 2.25 + 1.25 * 2 = 5.25 u, then a 0.25 u gap, then Left /
-    # Down / Right under RShift / Up / Del, so every row ends at 8.5 u.
-    [("Space", 0.5, 2.25, 0), ("RAlt", 2.75, 1.25, 1), ("RCtrl", 4.0, 1.25, 2),
+    # bottom: 0.25 + 2.25 + 1.25 * 2 = exactly 5.0 u, then a 0.5 u gap, then
+    # Left / Down / Right under RShift / Up / Del, so every row ends at 8.5 u.
+    [("Space", 0.25, 2.25, 0), ("RAlt", 2.5, 1.25, 1), ("RCtrl", 3.75, 1.25, 2),
      ("Left", 5.5, 1, 6), ("Down", 6.5, 1, 7), ("Right", 7.5, 1, 8)],
 ]
 
@@ -148,6 +175,38 @@ def matrix_size(hand):
     rows = len(ROWS[hand])
     cols = max(max(e[3] for e in r) for r in ROWS[hand]) + 1
     return rows, cols
+
+
+# ------------------------------------------------- Cherry MX PCB stabilizer
+# The hole pattern of the 2.00 u Cherry MX PCB mount stabilizer (the same one
+# serves 2.00 / 2.25 / 2.50 / 2.75 u keys): two holes per side, 11.938 mm left
+# and right of the key centre.  Offsets and drills are copied from the
+# keyswitch-kicad-library ``Mounting_Keyboard_Stabilizer.pretty/
+# Stabilizer_Cherry_MX_2.00u`` footprint, so a stock part drops straight in:
+#   * 3.048  mm NPTH  at cy - 6.985  (positioning hole, behind the switch)
+#   * 3.9878 mm NPTH  at cy + 8.225  (mounting hole, front / user side)
+STAB_MIN_U = 2.0            # every key this wide or wider gets a stabilizer
+STAB_HOLE_X = 11.938        # hole offset from the key centre, left and right
+STAB_SMALL = (3.048, -6.985)     # (drill diameter, y offset)
+STAB_BIG = (3.9878, 8.225)
+
+
+def stab_keys(hand):
+    """Keys of one half that need a stabilizer (2 u and wider)."""
+    return [k for k in keys(hand)
+            if k["kind"] != "encoder" and k["wu"] >= STAB_MIN_U - 1e-9]
+
+
+def stab_holes(hand):
+    """The four stabilizer holes of every wide key, in board coordinates."""
+    out = []
+    for k in stab_keys(hand):
+        for sx in (-1, 1):
+            for drill, dy in (STAB_SMALL, STAB_BIG):
+                out.append(dict(ref=k["ref"], label=k["label"], wu=k["wu"],
+                                x=k["cx"] + sx * STAB_HOLE_X,
+                                y=k["cy"] + dy, d=drill))
+    return out
 
 
 def keycaps(hand):

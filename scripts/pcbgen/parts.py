@@ -322,8 +322,42 @@ def mount_hole_m2():
                 pads=pads, graphics=g)
 
 
+def stabilizer_cherry_mx_2u():
+    """Cherry MX PCB mount stabilizer, 2.00 u hole pattern.
+
+    The same footprint serves 2.00 / 2.25 / 2.50 / 2.75 u keys: the holes sit
+    11.938 mm left and right of the key centre regardless of the key width.
+    Hole offsets and drills are copied from the keyswitch-kicad-library
+    ``Mounting_Keyboard_Stabilizer.pretty/Stabilizer_Cherry_MX_2.00u``
+    footprint (3.048 mm positioning hole behind the switch, 3.9878 mm
+    mounting hole towards the front of the key), so a stock part fits.
+    The housing outlines are drawn on F.Fab: on F.SilkS they would sit 0.06 mm
+    from the neighbouring key's switch outline.
+    """
+    pads = []
+    for sx in (-1, 1):
+        for drill, dy in ((3.048, -6.985), (3.9878, 8.225)):
+            pads.append(dict(num="", kind="np_thru_hole", shape="circle",
+                            lx=sx * 11.938, ly=dy, w=drill, drill=(drill, drill),
+                            layers=("*.Cu", "*.Mask")))
+    g = []
+    for sx in (-1, 1):
+        x0 = 8.563 if sx > 0 else -15.313
+        x1 = 15.313 if sx > 0 else -8.563
+        for (a, b) in (((x0, -5.53), (x1, -5.53)), ((x1, -5.53), (x1, 6.77)),
+                       ((x1, 6.77), (x0, 6.77)), ((x0, 6.77), (x0, -5.53))):
+            g.append(("line", a, b, "F.Fab", 0.1))
+    # stabilizer wire, drawn under the key cap
+    g += [("line", (-11.938, -4.0), (11.938, -4.0), "F.Fab", 0.1)]
+    return dict(name="Stabilizer_Cherry_MX_2.00u", attr="through_hole",
+                descr="Cherry MX PCB mount stabilizer 2.00-2.75u (4 NPTH holes)",
+                tags="stabilizer Cherry MX PCB mount",
+                pads=pads, graphics=g)
+
+
 FACTORY = {
     "choc": choc_hotswap,
+    "stab": stabilizer_cherry_mx_2u,
     "diode": diode_sod123,
     "mcu": pro_micro_rp2040,
     "trrs": trrs_pj320a,

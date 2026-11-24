@@ -135,7 +135,7 @@ def main():
     d = ImageDraw.Draw(img)
     titles = {
         "left": "Left Half: 33 keys + encoder, macro column 0.25u apart",
-        "right": "Right Half: 38 keys, ANSI stagger 0.5 / 0 / 0.25 / -0.5u",
+        "right": "Right Half: 38 keys, row starts -0.5 / 0 / 0.25 / -0.5 / 0.25u",
     }
     x = MARGIN
     for hand, (w, h) in zip(hands, sizes):

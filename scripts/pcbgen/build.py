@@ -5,7 +5,7 @@ import random as _random
 
 from . import parts
 from .geom import U, ROW0_Y, ROW_PITCH, place
-from .layout import CONFIG, keys
+from .layout import CONFIG, keys, stab_holes, STAB_MIN_U
 
 # --- matrix truss geometry (all values relative to a key centre) -----------
 DIODE_DX = 6.75          # diode centre offset from the switch centre
@@ -50,6 +50,42 @@ class Via:
         self.x, self.y, self.net, self.dia, self.drill = x, y, net, dia, drill
 
 
+# A stabilizer hole is a keepout: the row bus steps this far around it (edge of
+# the hole to the centre line of the track, so 0.375 mm of copper clearance for
+# a 0.25 mm track and still 0.25 mm more than the 0.2 mm design clearance).
+BUS_HOLE_CLEAR = 0.5
+
+
+def bus_points(xs, y, holes, margin=BUS_HOLE_CLEAR):
+    """Polyline that links the cathode vias of one matrix row on F.Cu.
+
+    The bus runs straight at ``y`` except where a stabilizer hole of a wide key
+    sits on that line.  There it detours *above* the hole: the strip between the
+    switch body and the hole (y from about cy + 4 to cy + 6) is empty on F.Cu,
+    while below the hole the next row's stabilizer holes and switch pads begin.
+    The legs are 45 degrees when there is room, a square jog when there is not.
+    """
+    blocks = []
+    for h in holes:
+        r = h["d"] / 2.0 + margin
+        L, R = h["x"] - r, h["x"] + r
+        T, B = h["y"] - r, h["y"] + r
+        if T < y < B and L < xs[-1] and R > xs[0]:
+            blocks.append((L, R, T))
+    blocks.sort()
+    pts = [(xs[0], y)]
+    cur = xs[0]
+    for L, R, T in blocks:
+        d = y - T
+        if d > 0 and L - d > cur + 1e-9:
+            pts += [(L, y), (L - d, T), (R + d, T), (R, y)]
+        else:
+            pts += [(L, y), (L, T), (R, T), (R, y)]
+        cur = R
+    pts.append((xs[-1], y))
+    return pts
+
+
 class Board:
     def __init__(self, hand):
         self.hand = hand
@@ -61,6 +97,7 @@ class Board:
         self.net_names = []
         self.net_id = {}
         self.warnings = []
+        self._n_stab = 0
 
     # ------------------------------------------------------------------ nets
     def net(self, name):
@@ -123,6 +160,13 @@ class Board:
                 k["sw"].pad("1").net = k["col_net"]
                 k["sw"].pad("2").net = k["knet"]
                 k["colpad"] = k["sw"].pad("1")
+                if k["wu"] >= STAB_MIN_U - 1e-9:
+                    # 2 u and wider: four NPTH holes for a Cherry MX PCB mount
+                    # stabilizer, centred on the key like the switch
+                    self._n_stab += 1
+                    k["stab"] = self.add("stab", "ST%d" % self._n_stab,
+                                         "Cherry MX PCB stabilizer 2u",
+                                         k["cx"], k["cy"], 0.0, "F")
             k["diode"] = self.add("diode", k["dref"], "1N4148W",
                                   k["cx"] + DIODE_DX, k["cy"] + DIODE_DY,
                                   0.0, "B", kbar_right=True)
@@ -205,10 +249,13 @@ class Board:
         for k in self.keys:
             rows.setdefault(k["row"], []).append(k)
         self.row_bus = {}
+        holes = stab_holes(self.hand)
         for r, ks in sorted(rows.items()):
             ys = ks[0]["cy"] + DIODE_DY
-            xs = [k["cx"] + DIODE_DX + VIA_DX for k in ks]
-            self.add_track((min(xs), ys), (max(xs), ys), SIG_W, "F.Cu", "ROW%d" % r)
+            xs = sorted(k["cx"] + DIODE_DX + VIA_DX for k in ks)
+            pts = bus_points(xs, ys, holes)
+            for a, b in zip(pts, pts[1:]):
+                self.add_track(a, b, SIG_W, "F.Cu", "ROW%d" % r)
             self.row_bus[r] = (min(xs), max(xs), ys)
         self.col_keys = {}
         for k in self.keys:
