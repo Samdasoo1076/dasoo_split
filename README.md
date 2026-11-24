@@ -1,8 +1,8 @@
 # choc-split-60 ⌨️
 
 로우스태거(row‑staggered) 배열을 좌우로 나눈 **스플릿 키보드**입니다.
-Kailh **Choc v1 로우프로파일 핫스왑** 스위치 **69개 + 로터리 인코더 1개 = 70키 포지션**
-(좌 34 / 우 36), 좌우 각각 **RP2040 Pro Micro**, TRRS 4극 케이블 통신, `COL2ROW` 매트릭스를 씁니다.
+Kailh **Choc v1 로우프로파일 핫스왑** 스위치 **70개 + 로터리 인코더 1개 = 71키 포지션**
+(좌 34 / 우 37), 좌우 각각 **RP2040 Pro Micro**, TRRS 4극 케이블 통신, `COL2ROW` 매트릭스를 씁니다.
 모든 PCB 배선은 자동 라우터 없이 좌표를 계산해 직접 배선했고, `scripts/verify_pcb.py`로 전수 검증합니다.
 
 ![layout render](docs/layout-render.png)
@@ -24,20 +24,20 @@ Kailh **Choc v1 로우프로파일 핫스왑** 스위치 **69개 + 로터리 인
 
 | 항목 | 값 |
 |---|---|
-| 배열 | 65% 로우스태거 + 좌측 매크로 열 + 우측 방향키, 좌우 분리 |
-| 키 수 | 좌 33 스위치 + 인코더 1 / 우 36 스위치 = **스위치 69 + 엔코더 1 (70 포지션)** |
+| 배열 | 65% 로우스태거 + 좌측 매크로 열 + 우측 방향키·Del, 좌우 분리 |
+| 키 수 | 좌 33 스위치 + 인코더 1 / 우 37 스위치 = **스위치 70 + 엔코더 1 (71 포지션)** |
 | 키 피치 | 19.05 mm (MX 표준 피치, Choc v1 스위치/키캡 사용) |
-| 행 스태거 | 좌 `0 / 0.5u / 0.75u / 1.25u` · 우 `0.5 / 0 / 0.25 / 0.75u` (ANSI 표준값, Tab 1.5u·Caps 1.75u·LShift 2.25u·`\` 1.5u) |
-| 분할 위치 | 숫자열 `6`\|`7`, 알파열 `T`\|`Y`, `G`\|`H`, `B`\|`N` — 두 장을 이어 붙이면 실제 ANSI 배열이 됩니다 |
+| 행 스태거 | 좌 `0 / 0.5u / 0.75u / 1.25u` · 우 `0.5 / 0 / 0.25 / -0.25u` (ANSI 표준값, Tab 1.5u·Caps 1.75u·LShift 2.25u·`\` 1.5u·RShift **1u**) |
+| 분할 위치 | 숫자열 `6`\|`7`, 알파열 `T`\|`Y`, `G`\|`H` — 하단 알파열은 `B` 가 **양쪽 하프에 하나씩** 있습니다(아래 설명) |
 | 매크로 열 | 좌측 최외곽 열에서 **0.25u(4.7625 mm)** 띄워 배치, 위→아래 `노브 → Home → End → PgUp → PgDn` |
-| 방향키 | 우측 하단 `↑`(Row 3) 위에 `← ↓ →`(Row 4), RShift 1.75u 뒤에 ↑ 배치 |
+| 방향키 | `RShift`(1u) 바로 오른쪽 `↑`, 그 아래 `↓`, `↑` 오른쪽에 `Del`, `Del`/`↓` 아래에 `→`, 그 왼쪽 `←`. `RCtrl` 과 `←` 사이는 **0.25u 빈칸**(예전 `RFn` 자리) |
 | 스위치 | Kailh Choc v1 (CPG1350), **핫스왑 소켓** (`SW_Hotswap_Kailh_Choc_V1`) |
 | 인코더 | Alps EC11 / Bourns PEC11R 호환 5핀 (A·C·B + 푸시 스위치 2핀), 6 mm 축 |
-| 다이오드 | 1N4148W SOD-123 × 70 (스위치 69 + 인코더 푸시 1), `COL2ROW` |
+| 다이오드 | 1N4148W SOD-123 × 71 (스위치 70 + 인코더 푸시 1), `COL2ROW` |
 | MCU | RP2040 Pro Micro (Elite‑Pi / Pro Micro RP2040 호환, 24핀) × 2 |
 | 좌우 연결 | TRRS PJ‑320A × 2, Full‑duplex UART (`VCC/GND/TX/RX`) |
 | 리셋 | 6×6 택트 스위치 × 2 (RST–GND) |
-| PCB | 2층, 1.6 mm, 좌 176×130 mm / 우 195×130 mm, M2 마운팅 홀 각 6개 |
+| PCB | 2층, 1.6 mm, 좌 176×130 mm / 우 181×130 mm, M2 마운팅 홀 각 6개 |
 | 펌웨어 | QMK + VIAL (RP2040, `MASTER_LEFT`, `ENCODER_MAP_ENABLE`) |
 
 ### 레이아웃
@@ -58,29 +58,37 @@ Kailh **Choc v1 로우프로파일 핫스왑** 스위치 **69개 + 로터리 인
                 ↑ 매크로 열과 본열 사이 간격 0.25u
 ```
 
-우측 하프 (36 포지션). 각 행은 왼쪽 끝이 자기 오프셋에서 시작합니다 — x는 키 단위(u).
+우측 하프 (37 포지션). 각 행은 왼쪽 끝이 자기 오프셋에서 시작합니다 — x는 키 단위(u).
 
 | 행 | 시작 x | 키 (왼쪽→오른쪽) | 오른쪽 끝 |
 |---|---|---|---|
 | Row 0 | **0.5u** | `7 8 9 0 - =` + `BSpc` 2.0u | 8.5u |
 | Row 1 | **0.0u** | `Y U I O P [ ]` + `\` 1.5u | 8.5u |
 | Row 2 | **0.25u** | `H J K L ; '` + `Enter` 2.25u | 8.5u |
-| Row 3 | **0.75u** | `N M , . /` + `RShift` 1.75u + `Up` (x 7.5u) | 8.5u |
-| Row 4 | **0.5u** | `Space` 2.25u + `RAlt`/`RFn`/`RCtrl` 1.25u×3 + `Left` (x 6.5u) + `Down` (x 7.5u) + `Right` (x 8.5u) | 9.5u |
+| Row 3 | **-0.25u** | `B` + `N M , . /` + `RShift` 1.0u + `Up` + `Del` | 8.75u |
+| Row 4 | **0.75u** | `Space` 2.25u + `RAlt`/`RCtrl` 1.25u×2 + **0.25u 빈칸** + `Left`/`Down`/`Right` | 8.75u |
 
-Row 0~3은 오른쪽 끝이 모두 **8.5u**로 한 줄로 맞습니다. 하단 열만 방향키 `Right`가
-**9.5u**까지 나가고, `Down`은 `Up`(7.5~8.5u) 바로 아래에 놓입니다.
+Row 0~2는 오른쪽 끝이 **8.5u**로 한 줄로 맞고, Row 3·4는 `Del`/`Right`가 **8.75u**에서 끝납니다.
+`Left`/`Down`/`Right` 는 각각 `RShift`/`Up`/`Del` **바로 아래**에 놓여 두 행의 열이 그대로 이어집니다.
+`RCtrl`(4.25~5.5u)과 `Left`(5.75u) 사이의 **0.25u 빈칸**은 전에 `RFn` 이 있던 자리입니다.
 좌측 하프의 행 오프셋(`0 / 0.5 / 0.75 / 1.25u`)과 합치면 두 장을 나란히 놓았을 때
-실제 ANSI 로우스태거가 됩니다(숫자열 `6`|`7`, 알파열 `T`|`Y`, `G`|`H`, `B`|`N`).
+실제 ANSI 로우스태거가 됩니다(숫자열 `6`|`7`, 알파열 `T`|`Y`, `G`|`H`).
 
-키캡 구성: **1u × 54, 1.25u × 6, 1.5u × 2, 1.75u × 2, 2u × 2, 2.25u × 3** (총 69개) + 노브 1개
+> 하단 알파열은 ANSI 분할선이 `B`|`N` 이라 `B` 가 원래 좌측 하프 끝에 있습니다.
+> 이 보드는 **우측 하프 Row 3 왼쪽 끝(x = -0.25u)에도 `B` 를 하나 더** 두었습니다
+> (요청에 따라 추가). 그래서 `B` 키는 두 장에 하나씩, 펌웨어에서도 `L35`·`R80` 두 자리가 모두 `KC_B` 입니다.
+> 한쪽 `B` 가 필요 없으면 키맵에서 그 자리를 `KC_NO` 로 바꾸면 됩니다.
+
+키캡 구성: **1u × 57, 1.25u × 5, 1.5u × 2, 1.75u × 1, 2u × 2, 2.25u × 3** (총 70개) + 노브 1개
 
 ---
 
 ## 2. 매트릭스와 핀맵
 
-양쪽 PCB 모두 **5행 × 8열** 매트릭스를 쓰고, MCU 핀 배치는 좌우가 완전히 동일합니다.
+양쪽 PCB 모두 **5행 × 9열** 매트릭스를 쓰고, MCU 핀 배치는 좌우가 완전히 동일합니다.
 좌측 매크로 열은 **COL7** 을 쓰고, 인코더 푸시 스위치는 그 열의 Row 0(`L07`)에 들어갑니다.
+우측 하프는 `B N M , . / RShift Up Del` 로 9개 키가 필요해 **COL0~COL8** 을 모두 씁니다
+(좌측은 COL8이 비어 있습니다).
 
 ### MCU 핀 → 네트 (좌/우 동일)
 
@@ -92,33 +100,35 @@ Row 0~3은 오른쪽 끝이 모두 **8.5u**로 한 줄로 맞습니다. 하단 �
 | 4 | GND | `GND` | | 16 | VCC | `VCC` (TRRS Tip) |
 | 5 | GP2 | `ROW0` | | 17 | GP29 | `ENC_B` (좌측만) |
 | 6 | GP3 | `ROW1` | | 18 | GP28 | `ENC_A` (좌측만) |
-| 7 | GP4 | `ROW2` | | 19 | GP27 | – (예비) |
+| 7 | GP4 | `ROW2` | | 19 | GP27 | `COL8` (우측만) |
 | 8 | GP5 | `ROW3` | | 20 | GP26 | `COL7` |
 | 9 | GP6 | `ROW4` | | 21 | GP22 | `COL5` |
 | 10 | GP7 | `COL0` | | 22 | GP20 | `COL3` |
 | 11 | GP8 | `COL1` | | 23 | GP23 | `COL6` |
 | 12 | GP9 | `COL2` | | 24 | GP21 | `COL4` |
 
-> 열 순서를 한 줄로 정리하면 `COL0..COL7 = GP7, GP8, GP9, GP20, GP21, GP22, GP23, GP26` 입니다.
+> 열 순서를 한 줄로 정리하면 `COL0..COL8 = GP7, GP8, GP9, GP20, GP21, GP22, GP23, GP26, GP27` 입니다.
 > 우측 PCB는 인코더가 없어서 GP28/GP29가 비어 있고, 그 핀은 풀업 입력으로만 남습니다.
-> (GP27은 예비로 비워 두었습니다.)
+> 좌측 PCB의 `COL8`(GP27)은 키가 없어서 풀업 입력으로만 남습니다.
+> 이번 개정에서 예비로 두었던 **GP27을 COL8** 에 배정해 9열을 수용했습니다.
 
 ### 키 → (행, 열)
 
-| 행 \ 열 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
-|---|---|---|---|---|---|---|---|---|
-| L0 | 좌 `` ` `` | 1 | 2 | 3 | 4 | 5 | 6 | 좌 ENC |
-| L1 | 좌 Tab | Q | W | E | R | T | – | 좌 Home |
-| L2 | 좌 Caps | A | S | D | F | G | – | 좌 End |
-| L3 | 좌 LShift | Z | X | C | V | B | – | 좌 PgUp |
-| L4 | 좌 LCtrl | LWin | LAlt | 좌 Space | – | – | – | 좌 PgDn |
-| R0 | 우 7 | 8 | 9 | 0 | - | = | BSpc | – |
-| R1 | Y | U | I | O | P | [ | ] | \ |
-| R2 | H | J | K | L | ; | ' | Enter | – |
-| R3 | N | M | , | . | / | RShift | ↑ | – |
-| R4 | 우 Space | RAlt | RFn | RCtrl | ← | ↓ | → | – |
+| 행 \ 열 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|---|---|
+| L0 | 좌 `` ` `` | 1 | 2 | 3 | 4 | 5 | 6 | 좌 ENC | – |
+| L1 | 좌 Tab | Q | W | E | R | T | – | 좌 Home | – |
+| L2 | 좌 Caps | A | S | D | F | G | – | 좌 End | – |
+| L3 | 좌 LShift | Z | X | C | V | B | – | 좌 PgUp | – |
+| L4 | 좌 LCtrl | LWin | LAlt | 좌 Space | – | – | – | 좌 PgDn | – |
+| R0 | 우 7 | 8 | 9 | 0 | - | = | BSpc | – | – |
+| R1 | Y | U | I | O | P | [ | ] | \ | – |
+| R2 | H | J | K | L | ; | ' | Enter | – | – |
+| R3 | 우 B | N | M | , | . | / | RShift | ↑ | Del |
+| R4 | 우 Space | RAlt | RCtrl | – | – | – | ← | ↓ | → |
 
-* QMK `MATRIX_ROWS = 10` (좌 0–4 / 우 5–9), `MATRIX_COLS = 8`.
+* QMK `MATRIX_ROWS = 10` (좌 0–4 / 우 5–9), `MATRIX_COLS = 9`.
+* `R4` 의 3~5열은 비어 있고, `← ↓ →` 는 각각 `RShift`·`↑`·`Del` 과 같은 열(6·7·8)에 들어갑니다.
 * 인코더 A/B는 매트릭스가 아니라 **GP28 / GP29** 직결이고, 푸시 스위치만 매트릭스 `L07`에 들어갑니다.
 
 ### TRRS 배선 (좌우가 서로 반대)
@@ -166,7 +176,7 @@ checking choc-split-60-left.kicad_pcb
   OK: all checks passed
 ======================================================================
 checking choc-split-60-right.kicad_pcb
-  pads=176 tracks=246 vias=54 nets=55
+  pads=180 tracks=257 vias=53 nets=57
   OK: all checks passed
 ```
 
@@ -180,25 +190,25 @@ checking choc-split-60-right.kicad_pcb
 | # | 수량 | 부품 | 비고 |
 |---|---|---|---|
 | 1 | 2 | RP2040 Pro Micro (Elite‑Pi 등) | 24핀 2.54 mm, **핀 소켓** 사용 권장 |
-| 2 | 69 | Kailh Choc v1 (CPG1350) 스위치 | 로우프로파일 |
-| 3 | 69 | Choc 핫스왑 소켓 | PCB 뒷면 |
-| 4 | 70 | 1N4148W (SOD‑123) | 캐소드(띠) 방향 주의 (D_ENC 포함) |
+| 2 | 70 | Kailh Choc v1 (CPG1350) 스위치 | 로우프로파일 |
+| 3 | 70 | Choc 핫스왑 소켓 | PCB 뒷면 |
+| 4 | 71 | 1N4148W (SOD‑123) | 캐소드(띠) 방향 주의 (D_ENC 포함) |
 | 5 | 1 | Alps EC11 / Bourns PEC11R 인코더 (푸시 포함) | 6 mm 축, 너트/와셔 포함품 |
 | 6 | 1 | 6 mm D컷 노브 | 인코더 축용 |
 | 7 | 2 | TRRS 잭 PJ‑320A | 3.5 mm 4극 |
 | 8 | 2 | 6×6×5 mm 택트 스위치 | 리셋 |
 | 9 | 12 | M2 나사/너트 | 홀 2.2 mm, 보드당 6개 |
-| 10 | 69 | Choc 키캡 | 1u 54 / 1.25u 6 / 1.5u 2 / 1.75u 2 / 2u 2 / 2.25u 3 |
+| 10 | 70 | Choc 키캡 | 1u 57 / 1.25u 5 / 1.5u 2 / 1.75u 1 / 2u 2 / 2.25u 3 |
 | 11 | 5 | Choc **플레이트 마운트** 스태빌라이저 | 2u·2.25u 키용 (PCB 홀 없음) |
-| 12 | 2 | PCB (2층, 1.6 mm) | 좌 176×130 / 우 195×130 mm |
+| 12 | 2 | PCB (2층, 1.6 mm) | 좌 176×130 / 우 181×130 mm |
 
 배선 통계(검증 스크립트 기준)
 
 | | 좌 | 우 |
 |---|---|---|
-| 트랙 | 222 세그먼트 / 약 3.11 m | 278 세그먼트 / 약 3.46 m |
-| 비아 (0.6/0.3 mm) | 39 | 48 |
-| 네트 | 55 | 55 |
+| 트랙 | 222 세그먼트 / 약 3.11 m | 257 세그먼트 / 약 3.50 m |
+| 비아 (0.6/0.3 mm) | 39 | 53 |
+| 네트 | 55 | 57 |
 
 기계 파일(`BOM.csv`)도 함께 들어 있습니다.
 
@@ -225,7 +235,7 @@ checking choc-split-60-right.kicad_pcb
 
 ## 7. 조립
 
-1. **뒷면(B.Cu)** 에 Choc 핫스왑 소켓 69개와 SOD‑123 다이오드 70개를 납땜합니다.
+1. **뒷면(B.Cu)** 에 Choc 핫스왑 소켓 70개와 SOD‑123 다이오드 71개를 납땜합니다.
    다이오드의 **캐소드 띠가 비아(행 버스) 쪽**을 향합니다.
 2. 앞면에 MCU 핀 소켓(2×12)을 납땜하고 RP2040 Pro Micro를 꽂습니다.
    **USB‑C 커넥터가 보드 바깥쪽 가장자리**를 향하도록 넣으세요(좌: 왼쪽, 우: 오른쪽).
@@ -250,8 +260,8 @@ checking choc-split-60-right.kicad_pcb
 
 ```
 firmware/choc_split_60/
-├── choc_split_60.h      # LAYOUT 매크로 (70 포지션)
-├── config.h             # 매트릭스 핀(5x8), COL2ROW, 시리얼, MASTER_LEFT, ENCODERS_PAD
+├── choc_split_60.h      # LAYOUT 매크로 (71 포지션) - 스크립트로 생성
+├── config.h             # 매트릭스 핀(5x9), COL2ROW, 시리얼, MASTER_LEFT, ENCODERS_PAD
 ├── info.json            # QMK 메타데이터(핀, 레이아웃, split, encoder) - 스크립트로 생성
 ├── rules.mk             # SPLIT_KEYBOARD, SERIAL_DRIVER=vendor, ENCODER_ENABLE/ENCODER_MAP_ENABLE
 └── keymaps/
@@ -259,8 +269,14 @@ firmware/choc_split_60/
     └── vial/{keymap.c, vial.json, config.h}
 ```
 
-* `info.json`, `vial.json`은 `scripts/gen_firmware.py`가 **PCB 레이아웃에서 그대로 생성**합니다.
-  배열을 바꾸려면 `scripts/pcbgen/layout.py`만 고치고 두 스크립트를 다시 돌리면 됩니다.
+* `info.json`, `vial.json`, `choc_split_60.h`(LAYOUT)는 `scripts/gen_firmware.py`가
+  **PCB 레이아웃에서 그대로 생성**합니다.
+  배열을 바꾸려면 `scripts/pcbgen/layout.py`만 고치고 스크립트를 다시 돌리면 됩니다.
+* **RFn 키가 없으므로 레이어는 스페이스바 홀드**로 들어갑니다.
+  * **좌 스페이스 홀드** → `_FN` (F열·숫자열·미디어). 탭하면 그냥 스페이스.
+  * **우 스페이스 홀드** → `_NAV` (Y·U·I·O 에 Home/PgDn/PgUp/End). 탭하면 그냥 스페이스.
+  * `TAPPING_TERM 180` + `PERMISSIVE_HOLD` 라서 빠르게 탭하면 항상 스페이스가 나갑니다.
+    VIAL에서 두 자리를 `KC_SPC` 로 바꿔 일반 스페이스로 쓸 수도 있습니다.
 * 인코더는 좌측에만 있고, 푸시 스위치는 매트릭스 `L07`(기본 레이어 `KC_MUTE`)입니다.
 * 엔코더 맵(레이어별 시계/반시계):
   * `_BASE`: 볼륨 다운 / 업
@@ -296,7 +312,7 @@ make choc_split_60:vial
 pcb/      choc-split-60-{left,right}.kicad_{pro,sch,pcb} + fp-lib-table
 libs/     choc60.pretty (Choc 핫스왑, SOD-123, Pro Micro RP2040, TRRS, 택트, EC11, M2)
 scripts/  generate_pcb.py (설계·배선 생성), verify_pcb.py (검증), preview.py,
-          gen_firmware.py (info.json/vial.json 생성), layout_kle.py (KLE 도면),
+          gen_firmware.py (info.json/vial.json/LAYOUT 헤더 생성), layout_kle.py (KLE 도면),
           export_libs.py
 docs/     preview-*.png, layout-kle.png, layout-render.png, verification.txt
 firmware/ QMK/VIAL 키보드 정의
@@ -307,7 +323,7 @@ BOM.csv, LICENSE
 
 ```bash
 python3 scripts/generate_pcb.py    # 두 장의 PCB + 회로도 + 프로젝트 파일 재생성
-python3 scripts/gen_firmware.py    # info.json / vial.json 재생성
+python3 scripts/gen_firmware.py    # info.json / vial.json / choc_split_60.h 재생성
 python3 scripts/export_libs.py     # libs/choc60.pretty 갱신
 python3 scripts/verify_pcb.py      # 기하 검증(위 4장의 결과가 다시 나옵니다)
 python3 scripts/preview.py         # 미리보기 PNG (좌/우)
@@ -320,6 +336,19 @@ python3 scripts/layout_kle.py      # KLE 형식 도면 PNG (layout.py 좌표에�
 ---
 
 ## 10. 변경 이력
+
+**2026-11-24 (3) 우측 B · Del · 1u RShift · 0.25u 간격**
+* `RShift` 를 **1.75u → 1.0u** 로 줄이고 바로 오른쪽에 `↑` 를 붙였습니다.
+* 우측 하프 Row 3 왼쪽 끝(**x = -0.25u**)에 **`B`** 를 추가했습니다(`N` 바로 왼쪽, `Y` 보다 0.25u 왼쪽).
+  그래서 이 행은 `B N M , . / RShift ↑ Del` 9키가 되고, `↑` 오른쪽 빈자리에 요청대로
+  **1u `Del`** 을 넣었습니다.
+* **`RFn` 키를 제거**했습니다. 하단 열은 `Space 2.25u + RAlt/RCtrl 1.25u×2`(끝 5.5u)
+  → **0.25u 빈칸** → `← ↓ →` 로 바뀌었고, `← ↓ →` 는 각각 `RShift`·`↑`·`Del` 바로 아래에 놓입니다.
+* 레이어 접근은 스페이스 홀드로 옮겼습니다(좌 `_FN`, 우 `_NAV`). 자세한 내용은 8절.
+* 매트릭스를 **5행×8열 → 5행×9열**(좌우 합 10×9)로 늘리고, 예비였던 **GP27 을 `COL8`** 에 배정했습니다.
+* 우측 하프 폭을 **195 → 181 mm** 로 다시 줄였습니다(`B` 가 왼쪽으로, `Right` 가 8.75u 로 들어와서).
+  마운팅 홀도 새 키 위치에 맞춰 재배치했습니다.
+* `choc_split_60.h`(LAYOUT)도 이제 `scripts/gen_firmware.py`가 생성합니다.
 
 **2026-11-24 (2) 우측 행 스태거 수정**
 * 우측 PCB의 다섯 행이 전부 `x = 0`에서 시작해 **일직선(오쏘리니어처럼)** 보이던 문제를 고쳐

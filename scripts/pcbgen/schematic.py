@@ -314,9 +314,11 @@ def write_schematic(board, path, project=None, root=None):
         body.append(label("K_ENC", dx + 6.35, dy, 0, "right"))
     # notes
     o.extend(body)
-    o.append('  (text "choc-split-60 %s - row staggered split, 69 Choc v1 hot swap keys'
-             ' + 1 rotary encoder, RP2040 Pro Micro, COL2ROW" (at %s 282 0)'
-             % (board.hand, num(30)))
+    nsw = sum(1 for k in board.keys if k["kind"] == "switch")
+    enc = " + 1 rotary encoder" if any(k["kind"] == "encoder" for k in board.keys) else ""
+    o.append('  (text "choc-split-60 %s - row staggered split, %d Choc v1 hot swap keys%s,'
+             ' RP2040 Pro Micro, COL2ROW" (at %s 282 0)'
+             % (board.hand, nsw, enc, num(30)))
     o.append('    (effects (font (size 2 2)) (justify left bottom))')
     o.append('    (uuid "%s")' % u())
     o.append('  )')

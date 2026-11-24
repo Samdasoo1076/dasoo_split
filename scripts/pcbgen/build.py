@@ -144,7 +144,8 @@ class Board:
 
     def assign_mcu_nets(self):
         row_pins = ["GP2", "GP3", "GP4", "GP5", "GP6"]
-        col_pins = ["GP7", "GP8", "GP9", "GP20", "GP21", "GP22", "GP23", "GP26"]
+        col_pins = ["GP7", "GP8", "GP9", "GP20", "GP21", "GP22", "GP23", "GP26",
+                    "GP27"]
         pin_net = {}
         for i, gp in enumerate(row_pins):
             pin_net[gp] = "ROW%d" % i

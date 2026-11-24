@@ -2643,7 +2643,7 @@
     (effects (font (size 1.27 1.27)) (justify right bottom))
     (uuid "0835d4b9-501e-468b-a47a-cd2bca98760e")
   )
-  (text "choc-split-60 left - row staggered split, 69 Choc v1 hot swap keys + 1 rotary encoder, RP2040 Pro Micro, COL2ROW" (at 30 282 0)
+  (text "choc-split-60 left - row staggered split, 33 Choc v1 hot swap keys + 1 rotary encoder, RP2040 Pro Micro, COL2ROW" (at 30 282 0)
     (effects (font (size 2 2)) (justify left bottom))
     (uuid "c7c58de6-c8c3-461d-ae32-4e9414245df7")
   )

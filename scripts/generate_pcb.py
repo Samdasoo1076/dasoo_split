@@ -51,7 +51,8 @@ def route_jobs(board):
     jobs = []
     # matrix fan-in first: one controller pin per row / column net
     for net in ["ROW0", "ROW1", "ROW2", "ROW3", "ROW4",
-                "COL0", "COL1", "COL2", "COL3", "COL4", "COL5", "COL6", "COL7"]:
+                "COL0", "COL1", "COL2", "COL3", "COL4", "COL5", "COL6", "COL7",
+                "COL8"]:
         jobs.append((net, [], SIG_W, True))
     for net in ["RST", "TX", "RX", "VCC", "GND"]:
         jobs.append((net, [], SIG_W if net in ("TX", "RX", "RST") else PWR_W, False))

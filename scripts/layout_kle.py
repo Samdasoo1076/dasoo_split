@@ -39,7 +39,7 @@ ARROW_TXT = (18, 22, 30)
 ACCENT = (86, 196, 214)
 
 MODS = {"Tab", "Caps", "LShift", "LCtrl", "LWin", "LAlt", "Space",
-        "BSpc", "Enter", "RShift", "RAlt", "RFn", "RCtrl"}
+        "BSpc", "Enter", "RShift", "RAlt", "RCtrl", "Del"}
 MACROS = {"Home", "End", "PgUp", "PgDn"}
 ARROWS = {"Up", "Down", "Left", "Right"}
 
@@ -135,7 +135,7 @@ def main():
     d = ImageDraw.Draw(img)
     titles = {
         "left": "Left Half: 33 keys + encoder, macro column 0.25u apart",
-        "right": "Right Half: 36 keys, ANSI row stagger 0.5 / 0 / 0.25 / 0.75u",
+        "right": "Right Half: 37 keys, ANSI stagger 0.5 / 0 / 0.25 / -0.25u",
     }
     x = MARGIN
     for hand, (w, h) in zip(hands, sizes):

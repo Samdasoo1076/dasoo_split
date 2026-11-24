@@ -9,9 +9,10 @@
 
 /* ---- split matrix ------------------------------------------------------- */
 #define MATRIX_ROWS 10          /* 5 rows per half */
-#define MATRIX_COLS 8           /* 8 columns per half */
+#define MATRIX_COLS 9           /* 9 columns per half (the right half's row 3
+                                 * needs one more than the left half) */
 #define MATRIX_ROW_PINS { GP2, GP3, GP4, GP5, GP6 }
-#define MATRIX_COL_PINS { GP7, GP8, GP9, GP20, GP21, GP22, GP23, GP26 }
+#define MATRIX_COL_PINS { GP7, GP8, GP9, GP20, GP21, GP22, GP23, GP26, GP27 }
 #define DIODE_DIRECTION COL2ROW
 
 /* ---- rotary encoder (left half only) ------------------------------------ */
