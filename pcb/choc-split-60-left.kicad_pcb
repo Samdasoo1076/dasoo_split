@@ -12769,15 +12769,15 @@
 		(uuid "700383a5-ad60-4a35-a8b0-c6f658296fdb")
 	)
 	(segment
-		(start -9 18.25)
-		(end 3 6.25)
+		(start -9.25 18.25)
+		(end 3 6)
 		(width 0.25)
 		(layer "F.Cu")
 		(net 2)
 		(uuid "402cacc9-e90c-4e41-a138-d9fd205ffa40")
 	)
 	(segment
-		(start 3 6.25)
+		(start 3 6)
 		(end 3 -2.75)
 		(width 0.25)
 		(layer "F.Cu")

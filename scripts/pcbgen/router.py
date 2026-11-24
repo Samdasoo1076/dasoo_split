@@ -162,9 +162,18 @@ class Router:
         for lay in range(2):
             self._obst(lay, v.x, v.y, v.dia, v.dia, 0, "circle",
                        CLEAR + PWR / 2 + 0.12, nid)
+            # Only cells whose centre is really on the via disc count as
+            # "already this net's copper": a path may start from an owner cell,
+            # and commit() begins the track at the cell centre, so a cell just
+            # outside the disc would produce a track that touches nothing.
             iy, ix = self.cell(v.x, v.y)
             r = max(1, int(round(v.dia / 2 / self.step)))
-            self.owner[lay][iy - r:iy + r + 1, ix - r:ix + r + 1] = nid
+            for jy in range(iy - r, iy + r + 1):
+                for jx in range(ix - r, ix + r + 1):
+                    if 0 <= jy < self.ny and 0 <= jx < self.nx:
+                        cx, cy = self.xy(jy, jx)
+                        if math.hypot(cx - v.x, cy - v.y) <= v.dia / 2 + 1e-9:
+                            self.owner[lay][jy, jx] = nid
 
     def _raster_line(self, lay, a, b, w, nid, inflate, obst=False):
         L = math.hypot(b[0] - a[0], b[1] - a[1])

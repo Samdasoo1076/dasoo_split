@@ -4,8 +4,11 @@ checking choc-split-60-left.kicad_pcb
   OK: all checks passed
 ======================================================================
 checking choc-split-60-right.kicad_pcb
-  pads=176 tracks=246 vias=54 nets=55
+  pads=176 tracks=278 vias=48 nets=55
   OK: all checks passed
 
-rev 2026-11-24 - 5x8 matrix per half, left macro column (encoder + Home /
-End / PgUp / PgDn), right arrow cluster, Th1/Th2 removed.
+rev 2026-11-24 (2) - right half ANSI row stagger 0.5 / 0 / 0.25 / 0.75 u,
+\ widened to 1.5 u, bottom row Space 2.25 u + RAlt/RFn/RCtrl 1.25 u so the
+arrow cluster sits at Left 6.5 / Down 7.5 / Right 8.5-9.5 u, board widened to
+195 mm.  Left half unchanged.  5x8 matrix per half, left macro column
+(encoder + Home / End / PgUp / PgDn), Th1/Th2 removed.

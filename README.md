@@ -5,10 +5,18 @@ Kailh **Choc v1 로우프로파일 핫스왑** 스위치 **69개 + 로터리 인
 (좌 34 / 우 36), 좌우 각각 **RP2040 Pro Micro**, TRRS 4극 케이블 통신, `COL2ROW` 매트릭스를 씁니다.
 모든 PCB 배선은 자동 라우터 없이 좌표를 계산해 직접 배선했고, `scripts/verify_pcb.py`로 전수 검증합니다.
 
+![layout render](docs/layout-render.png)
+
+*(실물 느낌 렌더 — 위 도면 그대로의 배열입니다)*
+
+![layout](docs/layout-kle.png)
+
+*(KLE 형식 도면 — 좌우 행 오프셋과 0.25u 매크로 열 간격이 그대로 보입니다)*
+
 ![left](docs/preview-left.png)
 ![right](docs/preview-right.png)
 
-*(빨강 = F.Cu, 파랑 = B.Cu, 흰 점 = 비아, 회색 = F.Silkscreen)*
+*(PCB 미리보기: 빨강 = F.Cu, 파랑 = B.Cu, 흰 점 = 비아, 회색 = F.Silkscreen)*
 
 ---
 
@@ -19,7 +27,8 @@ Kailh **Choc v1 로우프로파일 핫스왑** 스위치 **69개 + 로터리 인
 | 배열 | 65% 로우스태거 + 좌측 매크로 열 + 우측 방향키, 좌우 분리 |
 | 키 수 | 좌 33 스위치 + 인코더 1 / 우 36 스위치 = **스위치 69 + 엔코더 1 (70 포지션)** |
 | 키 피치 | 19.05 mm (MX 표준 피치, Choc v1 스위치/키캡 사용) |
-| 행 스태거 | `0 / 0.5u / 0.75u / 1.25u` (ANSI 표준값, Tab 1.5u·Caps 1.75u·LShift 2.25u) |
+| 행 스태거 | 좌 `0 / 0.5u / 0.75u / 1.25u` · 우 `0.5 / 0 / 0.25 / 0.75u` (ANSI 표준값, Tab 1.5u·Caps 1.75u·LShift 2.25u·`\` 1.5u) |
+| 분할 위치 | 숫자열 `6`\|`7`, 알파열 `T`\|`Y`, `G`\|`H`, `B`\|`N` — 두 장을 이어 붙이면 실제 ANSI 배열이 됩니다 |
 | 매크로 열 | 좌측 최외곽 열에서 **0.25u(4.7625 mm)** 띄워 배치, 위→아래 `노브 → Home → End → PgUp → PgDn` |
 | 방향키 | 우측 하단 `↑`(Row 3) 위에 `← ↓ →`(Row 4), RShift 1.75u 뒤에 ↑ 배치 |
 | 스위치 | Kailh Choc v1 (CPG1350), **핫스왑 소켓** (`SW_Hotswap_Kailh_Choc_V1`) |
@@ -28,7 +37,7 @@ Kailh **Choc v1 로우프로파일 핫스왑** 스위치 **69개 + 로터리 인
 | MCU | RP2040 Pro Micro (Elite‑Pi / Pro Micro RP2040 호환, 24핀) × 2 |
 | 좌우 연결 | TRRS PJ‑320A × 2, Full‑duplex UART (`VCC/GND/TX/RX`) |
 | 리셋 | 6×6 택트 스위치 × 2 (RST–GND) |
-| PCB | 2층, 1.6 mm, 좌 176×130 mm / 우 182×130 mm, M2 마운팅 홀 각 6개 |
+| PCB | 2층, 1.6 mm, 좌 176×130 mm / 우 195×130 mm, M2 마운팅 홀 각 6개 |
 | 펌웨어 | QMK + VIAL (RP2040, `MASTER_LEFT`, `ENCODER_MAP_ENABLE`) |
 
 ### 레이아웃
@@ -49,21 +58,22 @@ Kailh **Choc v1 로우프로파일 핫스왑** 스위치 **69개 + 로터리 인
                 ↑ 매크로 열과 본열 사이 간격 0.25u
 ```
 
-```
- ┌───┬───┬───┬───┬───┬───┬───────┐
- │ 7 │ 8 │ 9 │ 0 │ - │ = │ BSpc  │
- ├───┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴───┐
- │  Y  │ U │ I │ O │ P │ [ │ ] │  \  │
- ├───┬─┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬────┘
- │ H │ J │ K │ L │ ; │ ' │ Enter │
- ├───┴┬─┴┬──┴┬──┴┬──┴┬─┴──┬┴────┬┴───┐
- │ N  │ M │ , │ . │ / │RShift│  ↑  │
- ├────┴┬─┴─┬┴──┬┴───┴┬─┴─┬┴──┬─┴─┬───┤
- │Space│Alt│Fn │ Ctrl│ ← │ ↓ │ → │       ← 우측 (36 포지션)
- └─────┴───┴───┴─────┴───┴───┴───┘
-```
+우측 하프 (36 포지션). 각 행은 왼쪽 끝이 자기 오프셋에서 시작합니다 — x는 키 단위(u).
 
-키캡 구성: **1u × 55, 1.25u × 6, 1.5u × 1, 1.75u × 2, 2u × 3, 2.25u × 2** (총 69개) + 노브 1개
+| 행 | 시작 x | 키 (왼쪽→오른쪽) | 오른쪽 끝 |
+|---|---|---|---|
+| Row 0 | **0.5u** | `7 8 9 0 - =` + `BSpc` 2.0u | 8.5u |
+| Row 1 | **0.0u** | `Y U I O P [ ]` + `\` 1.5u | 8.5u |
+| Row 2 | **0.25u** | `H J K L ; '` + `Enter` 2.25u | 8.5u |
+| Row 3 | **0.75u** | `N M , . /` + `RShift` 1.75u + `Up` (x 7.5u) | 8.5u |
+| Row 4 | **0.5u** | `Space` 2.25u + `RAlt`/`RFn`/`RCtrl` 1.25u×3 + `Left` (x 6.5u) + `Down` (x 7.5u) + `Right` (x 8.5u) | 9.5u |
+
+Row 0~3은 오른쪽 끝이 모두 **8.5u**로 한 줄로 맞습니다. 하단 열만 방향키 `Right`가
+**9.5u**까지 나가고, `Down`은 `Up`(7.5~8.5u) 바로 아래에 놓입니다.
+좌측 하프의 행 오프셋(`0 / 0.5 / 0.75 / 1.25u`)과 합치면 두 장을 나란히 놓았을 때
+실제 ANSI 로우스태거가 됩니다(숫자열 `6`|`7`, 알파열 `T`|`Y`, `G`|`H`, `B`|`N`).
+
+키캡 구성: **1u × 54, 1.25u × 6, 1.5u × 2, 1.75u × 2, 2u × 2, 2.25u × 3** (총 69개) + 노브 1개
 
 ---
 
@@ -178,16 +188,16 @@ checking choc-split-60-right.kicad_pcb
 | 7 | 2 | TRRS 잭 PJ‑320A | 3.5 mm 4극 |
 | 8 | 2 | 6×6×5 mm 택트 스위치 | 리셋 |
 | 9 | 12 | M2 나사/너트 | 홀 2.2 mm, 보드당 6개 |
-| 10 | 69 | Choc 키캡 | 1u 55 / 1.25u 6 / 1.5u 1 / 1.75u 2 / 2u 3 / 2.25u 2 |
+| 10 | 69 | Choc 키캡 | 1u 54 / 1.25u 6 / 1.5u 2 / 1.75u 2 / 2u 2 / 2.25u 3 |
 | 11 | 5 | Choc **플레이트 마운트** 스태빌라이저 | 2u·2.25u 키용 (PCB 홀 없음) |
-| 12 | 2 | PCB (2층, 1.6 mm) | 좌 176×130 / 우 182×130 mm |
+| 12 | 2 | PCB (2층, 1.6 mm) | 좌 176×130 / 우 195×130 mm |
 
 배선 통계(검증 스크립트 기준)
 
 | | 좌 | 우 |
 |---|---|---|
-| 트랙 | 222 세그먼트 / 약 3.11 m | 246 세그먼트 / 약 3.39 m |
-| 비아 (0.6/0.3 mm) | 39 | 54 |
+| 트랙 | 222 세그먼트 / 약 3.11 m | 278 세그먼트 / 약 3.46 m |
+| 비아 (0.6/0.3 mm) | 39 | 48 |
 | 네트 | 55 | 55 |
 
 기계 파일(`BOM.csv`)도 함께 들어 있습니다.
@@ -286,8 +296,9 @@ make choc_split_60:vial
 pcb/      choc-split-60-{left,right}.kicad_{pro,sch,pcb} + fp-lib-table
 libs/     choc60.pretty (Choc 핫스왑, SOD-123, Pro Micro RP2040, TRRS, 택트, EC11, M2)
 scripts/  generate_pcb.py (설계·배선 생성), verify_pcb.py (검증), preview.py,
-          gen_firmware.py (info.json/vial.json 생성), export_libs.py
-docs/     preview-*.png, verification.txt
+          gen_firmware.py (info.json/vial.json 생성), layout_kle.py (KLE 도면),
+          export_libs.py
+docs/     preview-*.png, layout-kle.png, layout-render.png, verification.txt
 firmware/ QMK/VIAL 키보드 정의
 BOM.csv, LICENSE
 ```
@@ -300,6 +311,7 @@ python3 scripts/gen_firmware.py    # info.json / vial.json 재생성
 python3 scripts/export_libs.py     # libs/choc60.pretty 갱신
 python3 scripts/verify_pcb.py      # 기하 검증(위 4장의 결과가 다시 나옵니다)
 python3 scripts/preview.py         # 미리보기 PNG (좌/우)
+python3 scripts/layout_kle.py      # KLE 형식 도면 PNG (layout.py 좌표에서 직접)
 ```
 
 `generate_pcb.py`는 KiCad 파일을 직접 쓰고, 배선은 자체 A* 라우터(0.25 mm 그리드, 45도 이동,
@@ -309,7 +321,18 @@ python3 scripts/preview.py         # 미리보기 PNG (좌/우)
 
 ## 10. 변경 이력
 
-**2026-11-24 (이번 개정)**
+**2026-11-24 (2) 우측 행 스태거 수정**
+* 우측 PCB의 다섯 행이 전부 `x = 0`에서 시작해 **일직선(오쏘리니어처럼)** 보이던 문제를 고쳐
+  표준 ANSI **로우스태거**를 넣었습니다. 오프셋은 `0.5 / 0 / 0.25 / 0.75u`,
+  분할선은 숫자열 `6`|`7`, `T`|`Y`, `G`|`H`, `B`|`N`입니다.
+* Row 0~3의 오른쪽 끝을 전부 **8.5u**로 맞췄습니다. 그래서 `\` 는 1u → **1.5u**
+  (좌측 Tab과 같은 규격)로 넓혔습니다.
+* 하단 열은 `Space 2.25u + RAlt/RFn/RCtrl 1.25u×3` 으로 정확히 **6.5u**에서 끝나고,
+  그 뒤로 `← 6.5 / ↓ 7.5 / → 8.5~9.5u` 가 붙습니다. `↓`는 `↑`(7.5~8.5u) 바로 아래입니다.
+* 보드 폭을 **182 → 195 mm** 로 늘려 `→` 키가 외곽선 밖으로 나가지 않게 했고, 마운팅 홀도 다시 배치했습니다.
+* `docs/layout-kle.png`(KLE 도면)와 `docs/layout-render.png`(실물 렌더)를 새로 넣고 README에 올렸습니다.
+
+**2026-11-24 (1)**
 * 스페이스바 아래에 돌출돼 있던 **Th1/Th2 썸키 4개를 제거**하고, 보드를 그만큼 줄였습니다
   (좌 160×143 → 176×130 mm, 우 175×143 → 182×130 mm).
 * 좌측 최외곽 열에서 **0.25u 왼쪽**에 1u 폭 세로 열을 새로 만들고 위에서부터

@@ -7,7 +7,7 @@ Item,Qty,Designator,Value / Part,Footprint,Notes
 6,2,J1,TRRS jack PJ-320A (4 pole),choc60:TRRS_PJ-320A,3.5 mm TRRS cable between halves
 7,2,SW_RST,6x6x5 mm tactile switch,choc60:SW_Reset_6mm,pulls RST to GND
 8,12,H1-H12,M2 screw + nut (2.2 mm hole),choc60:MountingHole_M2,6 per half
-9,69,,Kailh Choc v1 keycaps,,- 55x 1u, 6x 1.25u, 1x 1.5u, 2x 1.75u, 3x 2u, 2x 2.25u
-10,5,,Choc plate mount stabilizer (2u),,3x 2u + 2x 2.25u keys (plate mount: no PCB holes)
+9,69,,Kailh Choc v1 keycaps,,- 54x 1u, 6x 1.25u, 2x 1.5u, 2x 1.75u, 2x 2u, 3x 2.25u
+10,5,,Choc plate mount stabilizer (2u),,2x 2u + 3x 2.25u keys (plate mount: no PCB holes)
 11,1,,Rotary knob 6 mm D shaft,,"for RE1, fits a 6 mm flatted / knurled shaft"
-12,2,,PCB 2 layer 1.6 mm,,- left half 176 x 130 mm / right half 182 x 130 mm
+12,2,,PCB 2 layer 1.6 mm,,- left half 176 x 130 mm / right half 195 x 130 mm

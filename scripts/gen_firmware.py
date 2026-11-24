@@ -17,7 +17,10 @@ from pcbgen.layout import keys, matrix_size   # noqa: E402
 ROOT = os.path.dirname(HERE)
 FW = os.path.join(ROOT, "firmware", "choc_split_60")
 
-RIGHT_OFFSET = 8.5      # key units between the two halves in the JSON view
+# The right half is rebased on its own left edge, so in the combined JSON view
+# it starts where a full ANSI board has ``Y`` -- 6.5 u right of ``Tab``.  That
+# reproduces the real ANSI stagger across the split seam.
+RIGHT_OFFSET = 6.5      # key units between the two halves in the JSON view
 X_SHIFT = 2.0           # keep every coordinate positive
 
 ROW_PINS = ["GP2", "GP3", "GP4", "GP5", "GP6"]
