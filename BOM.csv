@@ -1,8 +1,8 @@
 Item,Qty,Designator,Value / Part,Footprint,Notes
 1,2,U1,RP2040 Pro Micro (Elite-Pi / Pro Micro RP2040 compatible),choc60:ProMicro_RP2040,24 pin 2.54 mm headers - use female sockets on the PCB
-2,71,SW1-SW71,Kailh Choc v1 (CPG1350) low profile switch,choc60:SW_Hotswap_Kailh_Choc_V1_*.00u,hot swap - no soldering of switches
-3,71,SW1-SW71,Kailh Choc hot swap socket CPG1350,built into switch footprint,soldered on the back side
-4,72,D1-D71 + D_ENC,1N4148W SOD-123,choc60:D_SOD-123,cathode band towards the via / row bus (D_ENC belongs to the encoder push switch)
+2,71,"SW1-SW33 + SW1-SW38",Kailh Choc v1 (CPG1350) low profile switch,choc60:SW_Hotswap_Kailh_Choc_V1_*.00u,33 on the left + 38 on the right board (references restart per half), hot swap - no soldering of switches
+3,71,"SW1-SW33 + SW1-SW38",Kailh Choc hot swap socket CPG1350,built into switch footprint,soldered on the back side
+4,72,"D1-D33 + D1-D38 + D_ENC",1N4148W SOD-123,choc60:D_SOD-123,cathode band towards the via / row bus (D_ENC belongs to the encoder push switch)
 5,1,RE1,Alps EC11 / Bourns PEC11R rotary encoder with push switch,choc60:RotaryEncoder_EC11,left half macro column, 6 mm shaft, nut + washer
 6,2,J1,TRRS jack PJ-320A (4 pole),choc60:TRRS_PJ-320A,3.5 mm TRRS cable between halves
 7,2,SW_RST,6x6x5 mm tactile switch,choc60:SW_Reset_6mm,pulls RST to GND
