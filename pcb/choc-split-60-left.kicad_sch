@@ -218,7 +218,7 @@
     (uuid "59632d06-44d8-4ba1-a56a-93a0a90f4c14")
     (property "Reference" "SW1" (at 30 22.92 0)
       (effects (font (size 1.27 1.27))))
-    (property "Value" "` (1.00u)" (at 30 33.08 0)
+    (property "Value" "Esc (1.00u)" (at 30 33.08 0)
       (effects (font (size 1.27 1.27))))
     (property "Footprint" "choc60:SW_Hotswap_Kailh_Choc_V1_1.00u" (at 30 28 0)
       (effects (font (size 1.27 1.27)) hide))

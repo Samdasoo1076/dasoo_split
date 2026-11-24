@@ -4,11 +4,12 @@ checking choc-split-60-left.kicad_pcb
   OK: all checks passed
 ======================================================================
 checking choc-split-60-right.kicad_pcb
-  pads=180 tracks=257 vias=53 nets=57
+  pads=184 tracks=282 vias=58 nets=58
   OK: all checks passed
-rev 2026-11-24 (3) - right half: B added at x = -0.25 u (row 3 now 9 keys),
-RShift 1.75 -> 1.0 u with Up right next to it, RFn removed and replaced by a
-0.25 u gap between RCtrl and Left, 1 u Del at the right of the Up key.  Bottom
-row Space 2.25 + RAlt/RCtrl 1.25 * 2, Left/Down/Right under RShift/Up/Del.
-Matrix 5 x 9 per half (GP27 = COL8), right board 195 -> 181 mm,
-switches 69 -> 70.  Left half unchanged.
+rev 2026-11-24 (4) - left top-left key is Esc (label/firmware only, the PCB is
+byte identical); right number row gains a 1 u ` left of a 1 u BSpc; right rows
+3 and 4 move 0.25 u left so Del and Right end at 8.5 u too and all five rows
+stop on one line.  Right board outline re-fitted (still 181 x 130 mm, 4.76 mm
+further left), mounting hole 6 moved from the right strip into the bottom band.
+Matrix 5 x 9 per half unchanged, right switches 37 -> 38, switches 70 -> 71,
+keycaps 1u 57 -> 59 and 2u 2 -> 1.
