@@ -271,6 +271,47 @@ def reset_switch():
                 tags="tactile reset switch", pads=pads, graphics=g)
 
 
+def rotary_ec11():
+    """Alps EC11 / Bourns PEC11R compatible rotary encoder with push switch.
+
+    Terminal geometry follows the Bourns PEC11R datasheet: the three encoder
+    terminals A-C-B sit in one row at 2.5 mm pitch, the two switch terminals
+    are 5 mm apart on the opposite side, and the two mounting posts are 2.1 mm
+    diameter.  The shaft centre is the footprint origin; the 12.4 mm body sits
+    on the PCB (no centre hole).  The encoder terminals point to -Y and the
+    switch terminals to +Y, so the switch wiring drops towards the diode row.
+    """
+    pads = []
+    for num, name, lx in (("A", "A", -2.5), ("C", "C", 0.0), ("B", "B", 2.5)):
+        pads.append(dict(num=num, kind="thru_hole", shape="circle", lx=lx, ly=-7.5,
+                         w=2.0, drill=(1.05, 1.05), layers=("*.Cu", "*.Mask"), name=name))
+    for num, name, lx in (("S1", "S1", -2.5), ("S2", "S2", 2.5)):
+        pads.append(dict(num=num, kind="thru_hole", shape="circle", lx=lx, ly=7.0,
+                         w=2.0, drill=(1.05, 1.05), layers=("*.Cu", "*.Mask"), name=name))
+    pads.append(dict(num="", kind="np_thru_hole", shape="circle", lx=-6.0, ly=0.0,
+                     w=2.1, drill=(2.1, 2.1)))
+    pads.append(dict(num="", kind="np_thru_hole", shape="circle", lx=6.0, ly=0.0,
+                     w=2.1, drill=(2.1, 2.1)))
+    g = [("line", (-6.2, -6.2), (6.2, -6.2), "F.SilkS", 0.12),
+         ("line", (6.2, -6.2), (6.2, 6.2), "F.SilkS", 0.12),
+         ("line", (6.2, 6.2), (-6.2, 6.2), "F.SilkS", 0.12),
+         ("line", (-6.2, 6.2), (-6.2, -6.2), "F.SilkS", 0.12),
+         ("line", (-6.2, -6.2), (6.2, -6.2), "F.Fab", 0.1),
+         ("line", (6.2, -6.2), (6.2, 6.2), "F.Fab", 0.1),
+         ("line", (6.2, 6.2), (-6.2, 6.2), "F.Fab", 0.1),
+         ("line", (-6.2, 6.2), (-6.2, -6.2), "F.Fab", 0.1),
+         ("circle", (0, 0), ("r", 3.0), "F.SilkS", 0.12),
+         ("line", (-1.5, -8.6), (1.5, -8.6), "F.SilkS", 0.12),
+         ("line", (0, -7.6), (0, -9.6), "F.SilkS", 0.12),
+         ("line", (-7.2, -9.6), (7.2, -9.6), "F.CrtYd", 0.05),
+         ("line", (7.2, -9.6), (7.2, 9.4), "F.CrtYd", 0.05),
+         ("line", (7.2, 9.4), (-7.2, 9.4), "F.CrtYd", 0.05),
+         ("line", (-7.2, 9.4), (-7.2, -9.6), "F.CrtYd", 0.05)]
+    return dict(name="RotaryEncoder_EC11", attr="through_hole",
+                descr="Alps EC11 / Bourns PEC11R rotary encoder with push switch (5 pin)",
+                tags="rotary encoder EC11 PEC11R", pads=pads, graphics=g)
+
+
 def mount_hole_m2():
     pads = [dict(num="", kind="np_thru_hole", shape="circle", lx=0, ly=0,
                  w=2.2, drill=(2.2, 2.2), layers=("*.Cu", "*.Mask"))]
@@ -287,5 +328,6 @@ FACTORY = {
     "mcu": pro_micro_rp2040,
     "trrs": trrs_pj320a,
     "reset": reset_switch,
+    "encoder": rotary_ec11,
     "mount": mount_hole_m2,
 }

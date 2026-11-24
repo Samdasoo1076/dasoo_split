@@ -75,6 +75,7 @@ def main():
     specs.append(("ProMicro_RP2040_Mirrored", sp))
     for name, fn in (("TRRS_PJ-320A", parts.trrs_pj320a),
                      ("SW_Reset_6mm", parts.reset_switch),
+                     ("RotaryEncoder_EC11", parts.rotary_ec11),
                      ("MountingHole_M2", parts.mount_hole_m2)):
         sp = fn()
         specs.append((name, sp))

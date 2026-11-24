@@ -5,7 +5,7 @@ import random as _random
 
 from . import parts
 from .geom import U, ROW0_Y, ROW_PITCH, place
-from .layout import CONFIG, keys, matrix_size
+from .layout import CONFIG, keys
 
 # --- matrix truss geometry (all values relative to a key centre) -----------
 DIODE_DX = 6.75          # diode centre offset from the switch centre
@@ -99,18 +99,30 @@ class Board:
     # -------------------------------------------------------------- assembly
     def build(self):
         cfg = self.cfg
-        col_net = {}
-        row_net = {}
         for k in self.keys:
             k["col_net"] = "COL%d" % k["col"]
             k["row_net"] = "ROW%d" % k["row"]
-            k["sw"] = self.add("choc", k["ref"], "ChocV1 %.2fu" % k["wu"],
-                               k["cx"], k["cy"], 0.0, "F", width_u=k["wu"])
-            k["sw"].pad("1").net = k["col_net"]
-            k["sw"].pad("2").net = k["knet"]
             self.net(k["col_net"])
             self.net(k["row_net"])
             self.net(k["knet"])
+            if k["kind"] == "encoder":
+                enc = self.add("encoder", k["ref"], "EC11 rotary encoder",
+                               k["cx"], k["cy"], 0.0, "F")
+                enc.pad("A").net = "ENC_A"
+                enc.pad("B").net = "ENC_B"
+                enc.pad("C").net = "GND"
+                enc.pad("S1").net = k["col_net"]
+                enc.pad("S2").net = k["knet"]
+                for n in ("ENC_A", "ENC_B", "GND"):
+                    self.net(n)
+                k["sw"] = enc
+                k["colpad"] = enc.pad("S1")
+            else:
+                k["sw"] = self.add("choc", k["ref"], "ChocV1 %.2fu" % k["wu"],
+                                   k["cx"], k["cy"], 0.0, "F", width_u=k["wu"])
+                k["sw"].pad("1").net = k["col_net"]
+                k["sw"].pad("2").net = k["knet"]
+                k["colpad"] = k["sw"].pad("1")
             k["diode"] = self.add("diode", k["dref"], "1N4148W",
                                   k["cx"] + DIODE_DX, k["cy"] + DIODE_DY,
                                   0.0, "B", kbar_right=True)
@@ -131,8 +143,8 @@ class Board:
         self.assign_mcu_nets()
 
     def assign_mcu_nets(self):
-        row_pins = ["GP2", "GP3", "GP4", "GP5", "GP6", "GP7"]
-        col_pins = ["GP8", "GP9", "GP20", "GP21", "GP22", "GP23", "GP26", "GP27"]
+        row_pins = ["GP2", "GP3", "GP4", "GP5", "GP6"]
+        col_pins = ["GP7", "GP8", "GP9", "GP20", "GP21", "GP22", "GP23", "GP26"]
         pin_net = {}
         for i, gp in enumerate(row_pins):
             pin_net[gp] = "ROW%d" % i
@@ -142,6 +154,9 @@ class Board:
                 pin_net[gp] = "COL%d" % i
         pin_net["GP0"] = "TX"
         pin_net["GP1"] = "RX"
+        if self.hand == "left":        # the encoder only exists on the left
+            pin_net["GP28"] = "ENC_A"
+            pin_net["GP29"] = "ENC_B"
         pin_net["VCC"] = "VCC"
         pin_net["GND"] = "GND"
         pin_net["RST"] = "RST"
@@ -174,8 +189,15 @@ class Board:
         """
         for k in self.keys:
             cx, cy = k["cx"], k["cy"]
-            self.add_track((cx + STUB_DX, cy - 3.8),
-                           (cx + STUB_DX, cy + DIODE_DY), SIG_W, "B.Cu", k["knet"])
+            if k["kind"] == "encoder":
+                # the switch terminals point down; hook S2 to the diode anode
+                # with a short 90 degree jog that stays clear of the cathode pad
+                yk = cy + 7.0
+                self.add_track((cx + 2.5, yk), (cx + 8.5, yk), SIG_W, "B.Cu", k["knet"])
+                self.add_track((cx + 8.5, yk), (cx + 8.5, cy + DIODE_DY), SIG_W, "B.Cu", k["knet"])
+            else:
+                self.add_track((cx + STUB_DX, cy - 3.8),
+                               (cx + STUB_DX, cy + DIODE_DY), SIG_W, "B.Cu", k["knet"])
             vx, vy = cx + DIODE_DX + VIA_DX, cy + DIODE_DY
             self.add_via(vx, vy, k["row_net"])
         rows = {}

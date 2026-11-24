@@ -50,7 +50,7 @@ def route_jobs(board):
             by_net.setdefault(p.net, []).append(p)
     jobs = []
     # matrix fan-in first: one controller pin per row / column net
-    for net in ["ROW0", "ROW1", "ROW2", "ROW3", "ROW4", "ROW5",
+    for net in ["ROW0", "ROW1", "ROW2", "ROW3", "ROW4",
                 "COL0", "COL1", "COL2", "COL3", "COL4", "COL5", "COL6", "COL7"]:
         jobs.append((net, [], SIG_W, True))
     for net in ["RST", "TX", "RX", "VCC", "GND"]:
@@ -71,15 +71,21 @@ def build(hand, verbose=True):
         ks = sorted(b.col_keys[col], key=lambda k: k["cy"])
         net = "COL%d" % col
         connected.setdefault(net, set())
-        connected[net].add(id(ks[0]["sw"].pad("1")))
+        connected[net].add(id(ks[0]["colpad"]))
         for k in ks[1:]:
-            _connect_pad(b, r, k["sw"].pad("1"), connected[net])
-            connected[net].add(id(k["sw"].pad("1")))
+            _connect_pad(b, r, k["colpad"], connected[net])
+            connected[net].add(id(k["colpad"]))
     # ---- matrix fan-in -----------------------------------------------------
-    for row in range(6):
+    for row in range(5):
         _connect_pin(b, r, "ROW%d" % row)
-    for col in sorted(b.col_keys):
+    # Columns are fanned in from the outside in: the last columns sit closest to
+    # the controller and the corridors around it are the scarcest, so they claim
+    # their path first and the short runs use what is left.
+    for col in sorted(b.col_keys, reverse=True):
         _connect_pin(b, r, "COL%d" % col)
+    # ---- encoder (left half only) ------------------------------------------
+    for net in ["ENC_A", "ENC_B"]:
+        _connect_pads(b, r, net, SIG_W)
     # ---- power / serial ----------------------------------------------------
     for net in ["RST", "TX", "RX", "VCC"]:
         _connect_pads(b, r, net, PWR_W if net == "VCC" else SIG_W)

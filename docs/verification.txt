@@ -1,8 +1,11 @@
 ======================================================================
 checking choc-split-60-left.kicad_pcb
-  pads=156 tracks=226 vias=38 nets=50
+  pads=171 tracks=222 vias=39 nets=55
   OK: all checks passed
 ======================================================================
 checking choc-split-60-right.kicad_pcb
-  pads=168 tracks=237 vias=51 nets=54
+  pads=176 tracks=246 vias=54 nets=55
   OK: all checks passed
+
+rev 2026-11-24 - 5x8 matrix per half, left macro column (encoder + Home /
+End / PgUp / PgDn), right arrow cluster, Th1/Th2 removed.
