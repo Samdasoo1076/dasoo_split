@@ -1,12 +1,19 @@
 """KiCad schematic writer for the choc-split-60 halves (v7 format)."""
 import random as _random
 
+from .layout import matrix_size
+
 _RNG = _random.Random(20260618)
 
 
 def u():
     h = "%032x" % _RNG.getrandbits(128)
     return "%s-%s-4%s-a%s-%s" % (h[0:8], h[8:12], h[13:16], h[17:20], h[20:32])
+
+
+def esc(text):
+    """Escape a string for a KiCad S-expression (backslash and quote)."""
+    return str(text).replace("\\", "\\\\").replace('"', '\\"')
 
 
 def num(v):
@@ -85,8 +92,12 @@ LIB_TRRS = '''    (symbol "choc60:TRRS" (pin_names (offset 1.016)) (in_bom yes) 
       (symbol "TRRS_0_1"
         (rectangle (start -5.08 6.35) (end 5.08 -6.35)
           (stroke (width 0.254) (type default)) (fill (type background)))
-        (text "TRRS" (at 0 4.445 0)
-          (effects (font (size 1.27 1.27))))
+        (circle (center -3.81 2.54) (radius 0.508)
+          (stroke (width 0.1524) (type default)) (fill (type none)))
+        (circle (center -3.81 0.635) (radius 0.508)
+          (stroke (width 0.1524) (type default)) (fill (type none)))
+        (circle (center -3.81 -1.905) (radius 0.508)
+          (stroke (width 0.1524) (type default)) (fill (type none)))
       )
       (symbol "TRRS_1_1"
         (pin passive line (at 7.62 3.81 180) (length 2.54)
@@ -116,10 +127,12 @@ LIB_ENC = '''    (symbol "choc60:RotaryEncoder_SW" (pin_names (offset 1.016)) (i
       (symbol "RotaryEncoder_SW_0_1"
         (rectangle (start -7.62 6.35) (end 7.62 -6.35)
           (stroke (width 0.254) (type default)) (fill (type background)))
-        (text "ROTARY" (at 0 3.175 0)
-          (effects (font (size 1.27 1.27))))
-        (text "+ SW" (at 0 -0.635 0)
-          (effects (font (size 1.27 1.27))))
+        (polyline (pts (xy -4.0 2.0) (xy 0 4.5) (xy 4.0 2.0))
+          (stroke (width 0.1524) (type default)) (fill (type none)))
+        (circle (center 0 0.2) (radius 1.4)
+          (stroke (width 0.1524) (type default)) (fill (type none)))
+        (polyline (pts (xy -4.0 -4.0) (xy 4.0 -4.0))
+          (stroke (width 0.1524) (type default)) (fill (type none)))
       )
       (symbol "RotaryEncoder_SW_1_1"
         (pin passive line (at -10.16 2.54 0) (length 2.54)
@@ -187,7 +200,14 @@ def lib_mcu():
 def label(name, x, y, angle=0, justify="left"):
     return ('  (label "%s" (at %s %s %s)\n'
             '    (effects (font (size 1.27 1.27)) (justify %s bottom))\n'
-            '    (uuid "%s")\n  )' % (name, num(x), num(y), angle, justify, u()))
+            '    (uuid "%s")\n  )' % (esc(name), num(x), num(y), angle, justify, u()))
+
+
+def text(txt, x, y, size=1.8):
+    """Free text on the sheet (block captions and notes)."""
+    return ('  (text "%s" (at %s %s 0)\n'
+            '    (effects (font (size %s %s)) (justify left bottom))\n'
+            '    (uuid "%s")\n  )' % (esc(txt), num(x), num(y), num(size), num(size), u()))
 
 
 def wire(a, b):
@@ -196,16 +216,21 @@ def wire(a, b):
             % (num(a[0]), num(a[1]), num(b[0]), num(b[1]), u()))
 
 
-def sym(lib, ref, value, x, y, pins, project, root, footprint="", angle=0, mirror=None):
+def sym(lib, ref, value, x, y, pins, project, root, footprint="", angle=0, mirror=None,
+        ref_at=None, val_at=None, ref_size=1.27, val_size=1.27):
+    """Place a symbol.  `ref_at` / `val_at` are absolute field positions; the
+    defaults keep the reference above and the value below the body."""
     o = []
     o.append('  (symbol (lib_id "%s") (at %s %s %s) (unit 1)' % (lib, num(x), num(y), num(angle)))
-    o.append('    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)')
+    o.append('    (in_bom yes) (on_board yes) (dnp no)')
     o.append('    (uuid "%s")' % u())
-    o.append('    (property "Reference" "%s" (at %s %s 0)' % (ref, num(x), num(y - 5.08)))
-    o.append('      (effects (font (size 1.27 1.27))))')
-    o.append('    (property "Value" "%s" (at %s %s 0)' % (value, num(x), num(y + 5.08)))
-    o.append('      (effects (font (size 1.27 1.27))))')
-    o.append('    (property "Footprint" "%s" (at %s %s 0)' % (footprint, num(x), num(y)))
+    rx, ry = ref_at or (x, y - 5.08)
+    vx, vy = val_at or (x, y + 5.08)
+    o.append('    (property "Reference" "%s" (at %s %s 0)' % (esc(ref), num(rx), num(ry)))
+    o.append('      (effects (font (size %s %s))))' % (num(ref_size), num(ref_size)))
+    o.append('    (property "Value" "%s" (at %s %s 0)' % (esc(value), num(vx), num(vy)))
+    o.append('      (effects (font (size %s %s))))' % (num(val_size), num(val_size)))
+    o.append('    (property "Footprint" "%s" (at %s %s 0)' % (esc(footprint), num(x), num(y)))
     o.append('      (effects (font (size 1.27 1.27)) hide))')
     o.append('    (property "Datasheet" "" (at %s %s 0)' % (num(x), num(y)))
     o.append('      (effects (font (size 1.27 1.27)) hide))')
@@ -232,33 +257,38 @@ def write_schematic(board, path, project=None, root=None):
     o.append(LIB_ENC)
     o.append('  )')
     body = []
+    # every switch sits on the grid cell of its own matrix position, so each
+    # line of the page is one matrix row and the row net is the same all along
+    # it; the encoder (left half, ROW0/COL7) is drawn separately at the bottom
     grid = [k for k in board.keys if k["kind"] != "encoder"]
-    for i, k in enumerate(grid):
-        col_i = i % 8
-        row_i = i // 8
-        x = 30.0 + 34.0 * col_i
-        y = 28.0 + 24.0 * row_i
-        # switch
+    nrow, ncol = matrix_size(board.hand)
+    for k in grid:
+        x = 26.0 + 34.0 * k["col"]
+        y = 32.0 + 34.0 * k["row"]
+        # switch: reference above the body, value (the key legend) below it
         body.append(sym("choc60:SW_Push", k["ref"], "%s (%s)" % (k["label"], "%.2fu" % k["wu"]),
                         x, y, ["1", "2"], project, root,
-                        footprint="choc60:%s" % k["sw"].name.replace("choc60", "")))
+                        footprint="choc60:%s" % k["sw"].name.replace("choc60", ""),
+                        ref_at=(x, y - 4.2), val_at=(x, y + 4.2)))
         body.append(wire((x - 5.08, y), (x - 7.62, y)))
-        body.append(label(k["col_net"], x - 7.62, y, 0, "left"))
+        body.append(label(k["col_net"], x - 7.62, y, 0, "right"))
         body.append(wire((x + 5.08, y), (x + 7.62, y)))
-        body.append(label(k["knet"], x + 7.62, y, 0, "right"))
-        # diode
-        dy = y + 11.0
+        body.append(label(k["knet"], x + 7.62, y, 0, "left"))
+        # diode, below the switch on the same vertical, cathode up to the key
+        dy = y + 14.0
         body.append(sym("choc60:D", k["dref"], "1N4148W", x, dy, ["1", "2"], project, root,
-                        footprint="choc60:D_SOD-123"))
+                        footprint="choc60:D_SOD-123",
+                        ref_at=(x, dy - 4.4), val_at=(x, dy + 4.4)))
         body.append(wire((x - 3.81, dy), (x - 6.35, dy)))
-        body.append(label(k["row_net"], x - 6.35, dy, 0, "left"))
+        body.append(label(k["row_net"], x - 6.35, dy, 0, "right"))
         body.append(wire((x + 3.81, dy), (x + 6.35, dy)))
-        body.append(label(k["knet"], x + 6.35, dy, 0, "right"))
+        body.append(label(k["knet"], x + 6.35, dy, 0, "left"))
     # controller
-    mx, my = 320.0, 60.0
+    mx, my = 345.0, 70.0
     body.append(sym("choc60:ProMicro_RP2040", "U1", "RP2040 Pro Micro", mx, my,
                     [str(i) for i in range(1, 25)], project, root,
-                    footprint="choc60:ProMicro_RP2040"))
+                    footprint="choc60:ProMicro_RP2040",
+                    ref_at=(mx, my - 22.5), val_at=(mx, my + 22.5)))
     for num_, name in MCU_NAMES:
         y = my - mcu_pin_y(num_)
         net = _mcu_net(board, name)
@@ -274,30 +304,34 @@ def write_schematic(board, path, project=None, root=None):
             body.append(wire((px_, y), (mx + 17.78, y)))
             body.append(label(net, mx + 17.78, y, 0, "left"))
     # trrs
-    jx, jy = 330.0, 150.0
+    jx, jy = 345.0, 200.0
     body.append(sym("choc60:TRRS", "J1", "PJ-320A", jx, jy, ["1", "2", "3", "4"], project, root,
-                    footprint="choc60:TRRS_PJ-320A"))
+                    footprint="choc60:TRRS_PJ-320A",
+                    ref_at=(jx, jy - 9.6), val_at=(jx, jy + 9.6)))
     trrs = {"SLEEVE": "RX" if board.hand == "left" else "TX",
-            "TIP": "VCC", "RING1": "GND",
+            "TIP": "VCC",
+            "RING1": "GND",
             "RING2": "TX" if board.hand == "left" else "RX"}
     for pnum, pname, yy in (("1", "SLEEVE", 3.81), ("2", "TIP", 1.27),
                             ("3", "RING1", -1.27), ("4", "RING2", -3.81)):
         body.append(wire((jx + 7.62, jy - yy), (jx + 12.7, jy - yy)))
         body.append(label(trrs[pname], jx + 12.7, jy - yy, 0, "left"))
     # reset switch
-    rx, ry = 250.0, 248.0
+    rx, ry = 300.0, 228.0
     body.append(sym("choc60:SW_Push", "SW_RST", "Reset", rx, ry, ["1", "2"], project, root,
-                    footprint="choc60:SW_Reset_6mm"))
+                    footprint="choc60:SW_Reset_6mm",
+                    ref_at=(rx, ry - 4.2), val_at=(rx, ry + 4.2)))
     body.append(wire((rx - 5.08, ry), (rx - 7.62, ry)))
-    body.append(label("RST", rx - 7.62, ry, 0, "left"))
+    body.append(label("RST", rx - 7.62, ry, 0, "right"))
     body.append(wire((rx + 5.08, ry), (rx + 7.62, ry)))
-    body.append(label("GND", rx + 7.62, ry, 0, "right"))
+    body.append(label("GND", rx + 7.62, ry, 0, "left"))
     # rotary encoder and its matrix diode (left half only)
     if any(k["kind"] == "encoder" for k in board.keys):
-        ex, ey = 60.0, 248.0
+        ex, ey = 70.0, 228.0
         body.append(sym("choc60:RotaryEncoder_SW", "RE1", "EC11 rotary encoder", ex, ey,
                         ["A", "C", "B", "S1", "S2"], project, root,
-                        footprint="choc60:RotaryEncoder_EC11"))
+                        footprint="choc60:RotaryEncoder_EC11",
+                        ref_at=(ex, ey - 9.6), val_at=(ex, ey + 9.6)))
         for pname, py_, net in (("A", 2.54, "ENC_A"), ("C", 0.0, "GND"),
                                 ("B", -2.54, "ENC_B")):
             body.append(wire((ex - 10.16, ey - py_), (ex - 15.24, ey - py_)))
@@ -305,20 +339,33 @@ def write_schematic(board, path, project=None, root=None):
         for pname, py_, net in (("S1", 2.54, "COL7"), ("S2", -2.54, "K_ENC")):
             body.append(wire((ex + 10.16, ey - py_), (ex + 15.24, ey - py_)))
             body.append(label(net, ex + 15.24, ey - py_, 0, "left"))
-        dx, dy = 150.0, 252.0
+        dx, dy = 150.0, 232.0
         body.append(sym("choc60:D", "D_ENC", "1N4148W", dx, dy, ["1", "2"], project, root,
-                        footprint="choc60:D_SOD-123"))
+                        footprint="choc60:D_SOD-123",
+                        ref_at=(dx, dy - 4.4), val_at=(dx, dy + 4.4)))
         body.append(wire((dx - 3.81, dy), (dx - 6.35, dy)))
-        body.append(label("ROW0", dx - 6.35, dy, 0, "left"))
+        body.append(label("ROW0", dx - 6.35, dy, 0, "right"))
         body.append(wire((dx + 3.81, dy), (dx + 6.35, dy)))
-        body.append(label("K_ENC", dx + 6.35, dy, 0, "right"))
+        body.append(label("K_ENC", dx + 6.35, dy, 0, "left"))
+    # block captions, so a reviewer can find each part of the page
+    body.append(text("KEY MATRIX  -  %d rows x %d columns, one switch + one 1N4148W per key,"
+                     " COL2ROW" % (nrow, ncol), 26.0, 22.0, 1.8))
+    body.append(text("CONTROLLER", mx, my - 26.0, 1.8))
+    body.append(text("TRRS LINK", jx, 187.0, 1.8))
+    body.append(text("RESET", rx, 219.0, 1.8))
+    if any(k["kind"] == "encoder" for k in board.keys):
+        # the encoder's own matrix cell stays empty in the grid: say so, or the
+        # hole at ROW0/COL7 looks like a missing key
+        body.append(text("ROW0 / COL7 = RE1", 26.0 + 34.0 * 7 - 12.0, 40.0, 1.6))
+        body.append(text("drawn at the bottom", 26.0 + 34.0 * 7 - 12.0, 44.0, 1.6))
+        body.append(text("ROTARY ENCODER + ITS MATRIX DIODE", 95.0, 214.0, 1.8))
     # notes
     o.extend(body)
     nsw = sum(1 for k in board.keys if k["kind"] == "switch")
     enc = " + 1 rotary encoder" if any(k["kind"] == "encoder" for k in board.keys) else ""
     o.append('  (text "choc-split-60 %s - row staggered split, %d Choc v2 hot swap keys%s,'
-             ' RP2040 Pro Micro, COL2ROW" (at %s 282 0)'
-             % (board.hand, nsw, enc, num(30)))
+             ' RP2040 Pro Micro, COL2ROW" (at %s 268 0)'
+             % (board.hand, nsw, enc, num(26)))
     o.append('    (effects (font (size 2 2)) (justify left bottom))')
     o.append('    (uuid "%s")' % u())
     o.append('  )')

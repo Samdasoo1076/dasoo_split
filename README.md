@@ -18,6 +18,16 @@ Kailh **Choc v2(CPG1353) 로우프로파일 핫스왑** 스위치 **71개 + 로�
 
 *(PCB 미리보기: 빨강 = F.Cu, 파랑 = B.Cu, 흰 점 = 비아, 회색 = F.Silkscreen)*
 
+![schematic left](docs/review/sch-left.png)
+
+*(좌 하프 회로도 — 스위치 33 + 다이오드 33, 컨트롤러 U1, TRRS J1, 리셋, EC11 인코더 RE1과 그 다이오드.
+각 칸이 매트릭스의 (행, 열) 자리이고, 넷 이름이 그대로 적혀 있습니다)*
+
+![schematic right](docs/review/sch-right.png)
+
+*(우 하프 회로도 — 스위치 38 + 다이오드 38, 컨트롤러·TRRS·리셋. 아래쪽 두 줄의 `← ↓ →` 가 매트릭스
+COL6·7·8 에 그대로 놓입니다)*
+
 ---
 
 ## 1. 보드 사양
@@ -390,7 +400,7 @@ scripts/  generate_pcb.py (설계·배선 생성), verify_pcb.py (검증), previ
           gen_firmware.py (info.json/vial.json/LAYOUT 헤더 생성), layout_kle.py (KLE 도면),
           export_libs.py
 docs/     preview-*.png, detail-*.png (스태빌 확대), layout-kle.png, layout-render.png,
-          verification.txt, review/ (동박 면별 리뷰 이미지)
+          verification.txt, review/ (동박 면별 PCB 리뷰 이미지, sch-left/right.png 회로도)
 firmware/ QMK/VIAL 키보드 정의
 BOM.csv, LICENSE
 ```
@@ -399,11 +409,13 @@ BOM.csv, LICENSE
 
 ```bash
 python3 scripts/generate_pcb.py    # 두 장의 PCB + 회로도 + 프로젝트 파일 재생성
+python3 scripts/generate_pcb.py --schematic-only   # 회로도(.kicad_sch)만 다시 그리기
 python3 scripts/gen_firmware.py    # info.json / vial.json / choc_split_60.h 재생성
 python3 scripts/export_libs.py     # libs/choc60.pretty 갱신
 python3 scripts/verify_pcb.py      # 기하 검증(위 4장의 결과가 다시 나옵니다)
 python3 scripts/preview.py         # 미리보기 PNG (좌/우)
 python3 scripts/layout_kle.py      # KLE 형식 도면 PNG (layout.py 좌표에서 직접)
+python3 scripts/sch_images.py      # 회로도 리뷰 PNG (docs/review/sch-left/right.png)
 ```
 
 `generate_pcb.py`는 KiCad 파일을 직접 쓰고, 배선은 자체 A* 라우터(0.25 mm 그리드, 45도 이동,
@@ -412,6 +424,21 @@ python3 scripts/layout_kle.py      # KLE 형식 도면 PNG (layout.py 좌표에�
 ---
 
 ## 10. 변경 이력
+
+**2026-11-25 (8) 회로도 리뷰 이미지**
+* `docs/review/sch-left.png` · `sch-right.png` — A3 회로도 한 장을 **4621 × 3268 px(11 px/mm)** 로
+  렌더한 리뷰용 이미지. 심볼 외곽선·핀 번호·핀 이름·레퍼런스·값, 모든 와이어와 넷 라벨
+  (ROW0‑4 / COL0‑8 / K1‑33 / UART TX·RX / VCC / GND / ENC_A·B / K_ENC / RST)이 겹침 없이 읽힙니다.
+* `kicad-cli` 없이 `.kicad_sch` 를 직접 읽어 그리는 `scripts/sch_images.py` 를 추가했습니다.
+  문자열마다 잃크 박스를 기록해 **텍스트 겹침 0건 · 시트 밖 문자열 0건**을 스스로 검사하고,
+  겹치면 0이 아닌 종료 코드로 끝납니다(`--check` 는 이미지 없이 검사만).
+* 회로도 배치를 다시 잡았습니다. 각 키를 **자기 매트릭스 (행, 열) 자리**에 놓아 한 줄이 한 행이 되고,
+  값·레퍼런스를 심볼 위/아래로 분리해 겹침을 없앴습니다(기존에는 스위치 값과 다이오드 레퍼런스가
+  0.84 mm 간격으로 포개졌습니다). 왼쪽 넷 라벨은 심볼 바깥쪽으로 정렬을 뒤집었습니다.
+* `\` 키의 값이 S‑expression 에서 백슬래시 하나로 나가 KiCad 가 문자열을 잘못 읽던 문제를 고쳐
+  `\\ (1.50u)` 로 이스케이프했습니다.
+* 회로도만 다시 쓰는 `python3 scripts/generate_pcb.py --schematic-only` 를 추가했습니다(라우팅된
+  PCB 는 건드리지 않고 시트 uuid 도 유지).
 
 **2026-11-25 (7) 패드 위 비아 제거 · 다이오드 이격 · 행 버스 정리** (r/ErgoMechKeyboards 피드백 반영)
 * **패드 위 비아(via-on-pad)를 전부 없앴습니다.** 다이오드 72개의 캐소드 비아가 1.3×1.5 mm 캐소드

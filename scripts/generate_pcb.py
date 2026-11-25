@@ -195,15 +195,35 @@ def write_board(b, path, title, root):
 
 
 def main():
+    only_sch = "--schematic-only" in sys.argv[1:]
     for hand in ("left", "right"):
         print("building", hand)
+        sch = os.path.join(ROOT, "pcb", "choc-split-60-%s.kicad_sch" % hand)
+        if only_sch:
+            # redraw the schematic page only; the routed PCB is left untouched
+            b = Board(hand)
+            b.build()
+            root = _root_uuid(sch)
+            write_schematic(b, sch, "choc-split-60-%s" % hand, root)
+            print("  wrote", sch)
+            continue
         b, r = build(hand)
         print("  keys=%d tracks=%d vias=%d" % (len(b.keys), len(b.tracks), len(b.vias)))
         out = os.path.join(ROOT, "pcb", "choc-split-60-%s.kicad_pcb" % hand)
-        sch = os.path.join(ROOT, "pcb", "choc-split-60-%s.kicad_sch" % hand)
         root = write_schematic(b, sch, "choc-split-60-%s" % hand, None)
         write_board(b, out, "choc-split-60-%s" % hand, root)
         print("  wrote", out)
+
+
+def _root_uuid(path):
+    """Keep the sheet uuid stable when only the schematic is regenerated."""
+    if not os.path.exists(path):
+        return None
+    with open(path) as f:
+        for line in f:
+            if line.strip().startswith('(uuid "'):
+                return line.split('"')[1]
+    return None
 
 
 if __name__ == "__main__":
