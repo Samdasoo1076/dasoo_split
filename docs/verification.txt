@@ -1,34 +1,72 @@
+rev 2026-11-25 (6) - Choc v2 + Choc v2 PCB mount stabilizer
+===========================================================
+
+$ python3 scripts/verify_pcb.py
+
 ======================================================================
 checking choc-split-60-left.kicad_pcb
-  pads=171 tracks=241 vias=39 nets=55
-  stabilizers=2 holes=8
-    SW23  2.25u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 9.49, 74.90)
-    SW33  2.00u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 88.07, 93.95)
+  pads=171 tracks=251 vias=43 nets=55
+  stabilizers=2 holes=8 cutouts=4 (nearest copper 1.815 mm)
+    SW23  2.25u: 4/4 holes, nearest copper 0.320 mm (3.0 x 4.0 hole at 33.33, 74.91)
+    SW33  2.00u: 4/4 holes, nearest copper 0.320 mm (3.0 x 4.0 hole at 111.91, 93.96)
   OK: all checks passed
 ======================================================================
 checking choc-split-60-right.kicad_pcb
-  pads=184 tracks=295 vias=56 nets=58
-  stabilizers=3 holes=12
-    SW23  2.25u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 128.56, 55.85)
-    SW33  2.25u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 38.13, 93.95)
-    SW8   2.00u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 130.94, 17.75)
+  pads=184 tracks=271 vias=51 nets=58
+  stabilizers=3 holes=12 cutouts=6 (nearest copper 2.151 mm)
+    SW23  2.25u: 4/4 holes, nearest copper 0.320 mm (3.0 x 4.0 hole at 152.39, 55.87)
+    SW33  2.25u: 4/4 holes, nearest copper 0.320 mm (3.0 x 4.0 hole at 38.09, 93.96)
+    SW8   2.00u: 4/4 holes, nearest copper 0.320 mm (3.0 x 4.0 hole at 154.78, 17.77)
   OK: all checks passed
 
-rev 2026-11-24 (5) - the 2 u backspace is back: the right number row moves 1.0 u
-left (start -0.5 u) and carries 7 8 9 0 - = + 1 u ` + 2 u BSpc, still ending at
-8.5 u.  Right row 4 moves another 0.25 u left (start 0.25 u) so RCtrl ends at
-5.0 u and exactly 0.5 u of empty PCB separates it from Left at 5.5 u; the left
-space bar moves 0.5 u right (4.25 - 6.25 u) for the same gap after LAlt.
-Cherry MX PCB mount stabilizer holes on every 2 u+ key (20 NPTH holes):
-  pattern 3.048 mm positioning hole at cy - 6.985 and 3.9878 mm mounting hole
-  at cy + 8.225, both at cx +- 11.938 mm (keyswitch-kicad-library
-  Stabilizer_Cherry_MX_2.00u, which serves 2.00 - 2.75 u keys)
-  left:  LShift 2.25u, Space 2.00u   = 2 keys / 8 holes
-  right: BSpc 2.00u, Enter 2.25u, Space 2.25u = 3 keys / 12 holes
-  nearest copper to any of them 0.350 mm (row bus runs 0.5 mm from the hole
-  edge, 0.375 mm of copper); design clearance is 0.20 mm, so 0 violations.
-  The F.Cu row bus steps 45 degrees around the mounting hole of every wide key
-  and the maze router treats all 20 holes as keepouts on both layers.
-Tracks 222 -> 241 (left) / 282 -> 295 (right), vias 58 -> 56 (right, fewer
-layer changes once the number row's backspace moved back to 2 u); matrix
-5 x 9 per half, 71 switches and 72 diodes unchanged.
+Switch footprint - Kailh Choc v2 (CPG1353), hot swap socket CPG135001S30
+  pads 1/2 (socket)      unchanged from the v1 footprint: -3.5,-6.0 and 8.5,-3.8,
+                         2.55 x 2.5 mm, on the back side
+  socket legs            3.05 mm NPTH at 0,-5.9 and 5,-3.8 (switch pins, same
+                         positions as v1 per Kailh CPG135301D01)
+  centre hole            5.05 mm (v2 mounting post is 5.00; v1's was 3.40)
+  v2 guide post          1.8 x 2.2 mm slot at -5, +5.15 - Kailh's (-5.15,-5.00)
+                         under the same rotation that maps its pin coordinates
+                         onto the socket legs; a slot so that the post enters
+                         whether it is round (Kailh) or 2 x 1.5 (ai03)
+  v1 side pegs           removed (was 1.9 mm at +-5.5) -> a Choc v1 switch no
+                         longer fits this board, only Choc v2
+
+Stabilizer - Kailh Choc v2 PCB mount 2u (Salicylic-acid3 / Keeb-On!)
+  per 2 u+ key           4 oval NPTH clip holes: 3.2 x 3.4 mm at cx +- 11.9,
+                         cy - 6.2 and 3.0 x 4.0 mm at cx +- 11.9, cy + 8.24
+                         2 Edge.Cuts cutouts: x = cx +- 8.9 .. cx +- 14.9,
+                         y = cy - 3.75 .. cy + 3.75 (6 x 7.5 mm)
+  left:  LShift 2.25u, Space 2.00u   = 2 keys /  8 holes / 4 cutouts
+  right: BSpc 2.00u, Enter 2.25u, Space 2.25u = 3 keys / 12 holes / 6 cutouts
+  nearest copper to any oval hole 0.320 mm (diode anode pad to the 3.0 x 4.0
+  hole), design requirement 0.30 mm -> 0 violations
+  nearest copper to any cutout 1.815 mm (left) / 2.151 mm (right) -> 0
+  violations; the router treats every cutout as a 0.5 mm inflated keepout
+
+Why the switch of a 2 u+ key is turned 90 degrees
+  With the switch in line, hot swap socket pad 2 (x 7.225 .. 9.775, y
+  -5.05 .. -2.55 from the key centre) runs 0.875 x 1.2 mm into the right hand
+  cutout (x 8.9 .. 14.9, y -3.75 .. 3.75) - the pad would be milled away - and
+  the socket body would sit where the stabilizer housing protrudes below the
+  PCB (the same interference Salicylic-acid3 warns about: "turn the switch
+  sideways").  Turned 90 degrees the socket pads stay inside x -7.3 .. +7.3,
+  which clears both cutouts by more than 0.2 mm.
+  Because pad 2 then sits at cx + 3.8, cy + 8.5, that key's diode moves from
+  x 6.75 to 7.68 mm and the switch-to-diode stub drops below the diode
+  cathode (y = cy + 10.35) before entering the anode pad, keeping 0.2 mm to
+  the cathode pad and 0.925 mm to the row via.
+
+Row bus
+  The F.Cu row bus steps 45 degrees above each 3.0 x 4.0 clip hole of a wide
+  key (0.5 mm from the hole edge, 0.375 mm of copper clearance) and the maze
+  router treats all 20 oval holes and all 10 cutouts as keepouts on both
+  layers.
+
+Counts
+  tracks 241 -> 251 (left) / 295 -> 271 (right), vias 39 -> 43 / 56 -> 51;
+  71 switches, 72 diodes, matrix 5 x 9 per half unchanged.
+
+Not run here: KiCad DRC and the GND zone fill (no kicad-cli in this
+environment).  Open each .kicad_pcb, press B, then Inspect -> Design Rules
+Checker, and look at the two cutouts of every 2 u+ key in the 3D viewer.

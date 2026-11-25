@@ -11,6 +11,8 @@ import sys
 
 from PIL import Image, ImageDraw, ImageFont
 
+from pcbgen.geom import place
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -32,8 +34,8 @@ def _font(size):
     return ImageFont.load_default()
 
 
-def render(board, path, scale=4.0, labels=True):
-    x0, y0, x1, y1 = board.cfg["outline"]
+def render(board, path, scale=4.0, labels=True, region=None):
+    x0, y0, x1, y1 = region or board.cfg["outline"]
     W = int((x1 - x0) * scale) + 20
     H = int((y1 - y0) * scale) + 20
     img = Image.new("RGB", (W, H), (16, 16, 18))
@@ -56,13 +58,25 @@ def render(board, path, scale=4.0, labels=True):
                 d.ellipse([a[0], a[1], b[0], b[1]], outline=(96, 96, 100),
                           width=max(1, int(g[4] * scale)))
 
+    # board cutouts (stabilizer housings) on Edge.Cuts -- footprint graphics are
+    # stored in local coordinates, so they are placed with the footprint's own
+    # position, rotation and side
+    for fp in board.fps:
+        for g in fp.graphics:
+            if g[3] != "Edge.Cuts" or g[0] != "line":
+                continue
+            a = place(fp.px, fp.py, g[1][0], g[1][1], fp.ang, fp.side)
+            b = place(fp.px, fp.py, g[2][0], g[2][1], fp.ang, fp.side)
+            d.line([P(*a), P(*b)], fill=(150, 255, 190),
+                   width=max(1, int(0.2 * scale)))
+
     # pads
     for fp in board.fps:
         for p in fp.pads:
             if p.is_hole:
-                c = P(p.gx, p.gy)
-                r = p.w / 2 * scale
-                d.ellipse([c[0] - r, c[1] - r, c[0] + r, c[1] + r],
+                a = P(p.gx - p.w / 2, p.gy - p.h / 2)
+                b = P(p.gx + p.w / 2, p.gy + p.h / 2)
+                d.ellipse([a[0], a[1], b[0], b[1]],
                           fill=(30, 30, 34), outline=(120, 120, 90))
             else:
                 for lay in p.pad_layers():
@@ -106,9 +120,31 @@ def render(board, path, scale=4.0, labels=True):
     return path
 
 
+def render_stab_details(board, hand, root):
+    """One 12 px/mm crop around every stabilizer key, for the docs."""
+    from pcbgen.layout import stab_keys
+    out = []
+    for k in stab_keys(hand):
+        cx, cy = k["cx"], k["cy"]
+        hw = k["wu"] * 19.05 / 2 + 12.0
+        region = (cx - hw, cy - 16.0, cx + hw, cy + 24.0)
+        path = os.path.join(root, "docs", "detail-%s-%s.png" % (hand, k["label"].lower()))
+        render(board, path, scale=10.0, labels=True, region=region)
+        out.append(path)
+    return out
+
+
 if __name__ == "__main__":
     import generate_pcb as g
-    hands = sys.argv[1:] or ["left", "right"]
+    args = sys.argv[1:]
+    if args[:1] == ["detail"]:
+        args = args[1:] or ["left", "right"]
+        for hand in args:
+            b, r = g.build(hand, verbose=True)
+            for path in render_stab_details(b, hand, g.ROOT):
+                print("wrote", path)
+        sys.exit(0)
+    hands = args or ["left", "right"]
     for hand in hands:
         b, r = g.build(hand, verbose=True)
         out = os.path.join(g.ROOT, "docs", "preview-%s.png" % hand)

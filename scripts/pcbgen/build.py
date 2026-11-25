@@ -5,10 +5,13 @@ import random as _random
 
 from . import parts
 from .geom import U, ROW0_Y, ROW_PITCH, place
-from .layout import CONFIG, keys, stab_holes, STAB_MIN_U
+from .layout import CONFIG, keys, stab_holes, stab_cutouts, STAB_MIN_U
 
 # --- matrix truss geometry (all values relative to a key centre) -----------
 DIODE_DX = 6.75          # diode centre offset from the switch centre
+DIODE_DX_STAB = 7.68     # ... for the 90 degree turned stabilizer keys, where
+                         # switch pad 2 sits at +3.8 / +8.5 and would otherwise
+                         # touch the diode cathode pad
 DIODE_DY = 9.0           # diode centre below the switch centre
 STUB_DX = 8.5            # switch pad 2 -> diode anode vertical stub
 VIA_DX = -1.75           # cathode via offset from the diode centre
@@ -98,6 +101,7 @@ class Board:
         self.net_id = {}
         self.warnings = []
         self._n_stab = 0
+        self.cutouts = stab_cutouts(hand)
 
     # ------------------------------------------------------------------ nets
     def net(self, name):
@@ -155,20 +159,23 @@ class Board:
                 k["sw"] = enc
                 k["colpad"] = enc.pad("S1")
             else:
-                k["sw"] = self.add("choc", k["ref"], "ChocV1 %.2fu" % k["wu"],
-                                   k["cx"], k["cy"], 0.0, "F", width_u=k["wu"])
+                k["sw"] = self.add("choc", k["ref"], "ChocV2 %.2fu" % k["wu"],
+                                   k["cx"], k["cy"], k.get("sw_ang", 0.0), "F",
+                                   width_u=k["wu"])
                 k["sw"].pad("1").net = k["col_net"]
                 k["sw"].pad("2").net = k["knet"]
                 k["colpad"] = k["sw"].pad("1")
                 if k["wu"] >= STAB_MIN_U - 1e-9:
-                    # 2 u and wider: four NPTH holes for a Cherry MX PCB mount
-                    # stabilizer, centred on the key like the switch
+                    # 2 u and wider: Kailh Choc v2 PCB mount stabilizer (four
+                    # oval clip holes and, on Edge.Cuts, the two cutouts the
+                    # housing hangs through), centred on the key
                     self._n_stab += 1
                     k["stab"] = self.add("stab", "ST%d" % self._n_stab,
-                                         "Cherry MX PCB stabilizer 2u",
+                                         "Choc v2 stab 2u",
                                          k["cx"], k["cy"], 0.0, "F")
+            ddx = DIODE_DX_STAB if k.get("sw_ang", 0.0) else DIODE_DX
             k["diode"] = self.add("diode", k["dref"], "1N4148W",
-                                  k["cx"] + DIODE_DX, k["cy"] + DIODE_DY,
+                                  k["cx"] + ddx, k["cy"] + DIODE_DY,
                                   0.0, "B", kbar_right=True)
             k["diode"].pad("1").net = k["row_net"]
             k["diode"].pad("2").net = k["knet"]
@@ -240,10 +247,23 @@ class Board:
                 yk = cy + 7.0
                 self.add_track((cx + 2.5, yk), (cx + 8.5, yk), SIG_W, "B.Cu", k["knet"])
                 self.add_track((cx + 8.5, yk), (cx + 8.5, cy + DIODE_DY), SIG_W, "B.Cu", k["knet"])
-            else:
+            elif k.get("sw_ang", 0.0) == 0.0:
                 self.add_track((cx + STUB_DX, cy - 3.8),
                                (cx + STUB_DX, cy + DIODE_DY), SIG_W, "B.Cu", k["knet"])
-            vx, vy = cx + DIODE_DX + VIA_DX, cy + DIODE_DY
+            else:
+                # 90 degree turned switch of a stabilizer key: pad 2 sits at
+                # (cx + 3.8, cy + 8.5).  The diode cathode (row net) is in the
+                # straight line, so the stub drops below it and comes up into
+                # the anode pad from underneath.
+                self.add_track((cx + 3.8, cy + 8.5), (cx + 3.8, cy + 10.35),
+                               SIG_W, "B.Cu", k["knet"])
+                ax = cx + DIODE_DX_STAB + 1.75
+                self.add_track((cx + 3.8, cy + 10.35), (ax, cy + 10.35),
+                               SIG_W, "B.Cu", k["knet"])
+                self.add_track((ax, cy + 10.35), (ax, cy + DIODE_DY),
+                               SIG_W, "B.Cu", k["knet"])
+            ddx = DIODE_DX_STAB if k.get("sw_ang", 0.0) else DIODE_DX
+            vx, vy = cx + ddx + VIA_DX, cy + DIODE_DY
             self.add_via(vx, vy, k["row_net"])
         rows = {}
         for k in self.keys:
@@ -252,7 +272,8 @@ class Board:
         holes = stab_holes(self.hand)
         for r, ks in sorted(rows.items()):
             ys = ks[0]["cy"] + DIODE_DY
-            xs = sorted(k["cx"] + DIODE_DX + VIA_DX for k in ks)
+            xs = sorted(k["cx"] + (DIODE_DX_STAB if k.get("sw_ang", 0.0) else DIODE_DX)
+                        + VIA_DX for k in ks)
             pts = bus_points(xs, ys, holes)
             for a, b in zip(pts, pts[1:]):
                 self.add_track(a, b, SIG_W, "F.Cu", "ROW%d" % r)

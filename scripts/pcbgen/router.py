@@ -13,6 +13,7 @@ import numpy as np
 SIG = 0.25
 PWR = 0.5
 CLEAR = 0.2
+CUT_CLEAR = 0.50        # copper to a board cutout edge (Edge.Cuts)
 VIA_D = 0.6
 VIA_DRILL = 0.3
 
@@ -125,6 +126,14 @@ class Router:
         for fp in b.fps:
             for p in fp.pads:
                 self.add_pad(p, track_w=SIG)
+        # board cutouts of the stabilizer keys: keep the whole rectangle free
+        for c in getattr(b, "cutouts", []):
+            for l in range(2):
+                self._stamp(self.blocked, l,
+                            (c["x0"] + c["x1"]) / 2.0,
+                            (c["y0"] + c["y1"]) / 2.0,
+                            c["x1"] - c["x0"], c["y1"] - c["y0"],
+                            0.0, "rect", CUT_CLEAR)
         # truss copper
         for tr in b.tracks:
             self.add_track(tr, track_w=tr.width)

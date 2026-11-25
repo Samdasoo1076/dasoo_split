@@ -77,7 +77,7 @@ def main():
                      ("SW_Reset_6mm", parts.reset_switch),
                      ("RotaryEncoder_EC11", parts.rotary_ec11),
                      ("MountingHole_M2", parts.mount_hole_m2),
-                     ("Stabilizer_Cherry_MX_2.00u", parts.stabilizer_cherry_mx_2u)):
+                     ("Stabilizer_Choc_V2_PCBMount_2u", parts.stabilizer_choc_v2_2u)):
         sp = fn()
         specs.append((name, sp))
     for name, sp in specs:

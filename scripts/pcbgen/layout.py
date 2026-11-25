@@ -39,8 +39,11 @@ key units (19.05 mm); matrix row is the row index in the table.
     ``Left`` (5.5 u)
   * the left bottom row's ``Space`` moves 0.5 u right (4.25 - 6.25 u) to give
     the same 0.5 u of PCB between ``LAlt`` and the space bar
-  * every key of 2 u and wider gets the four holes of the Cherry MX PCB mount
-    stabilizer (2.00 u pattern) -- see :func:`stab_holes`
+  * every key of 2 u and wider gets the Kailh Choc v2 PCB mount stabilizer
+    (4 oval clip holes + two board cutouts, 2.00 u pattern, see
+    :func:`stab_holes` / :func:`stab_cutouts`) and is turned 90 degrees, because
+    the hot swap socket would otherwise run into the stabilizer cutout (and the
+    protrusion on the back of the stabilizer)
 """
 from .geom import U, ROW0_Y, ROW_PITCH
 
@@ -162,9 +165,16 @@ def keys(hand):
                 ref, dref, knet = "SW%d" % sn, "D%d" % sn, "K%d" % sn
             cx = (xu + wu / 2.0) * U
             cy = ROW0_Y + r * ROW_PITCH
+            # 2 u and wider: the Choc v2 stabilizer needs the whole strip beside
+            # the switch clear (see STAB_CUTOUT), so those switches are placed
+            # 90 degrees turned -- with the pads in line, the hot swap socket
+            # pad 2 lands inside the cutout.  -90 keeps switch pad 2 (the COL2ROW
+            # side, which continues to the diode) next to the diode row.
+            sw_ang = -90.0 if (kind == "switch" and
+                               wu >= STAB_MIN_U - 1e-9) else 0.0
             out.append(dict(
                 n=sn, ref=ref, dref=dref, label=label, kind=kind,
-                row=r, col=col, xu=xu, wu=wu, cx=cx, cy=cy,
+                row=r, col=col, xu=xu, wu=wu, cx=cx, cy=cy, sw_ang=sw_ang,
                 knet=knet,
                 matrix=(r, col),
             ))
@@ -177,18 +187,18 @@ def matrix_size(hand):
     return rows, cols
 
 
-# ------------------------------------------------- Cherry MX PCB stabilizer
-# The hole pattern of the 2.00 u Cherry MX PCB mount stabilizer (the same one
-# serves 2.00 / 2.25 / 2.50 / 2.75 u keys): two holes per side, 11.938 mm left
-# and right of the key centre.  Offsets and drills are copied from the
-# keyswitch-kicad-library ``Mounting_Keyboard_Stabilizer.pretty/
-# Stabilizer_Cherry_MX_2.00u`` footprint, so a stock part drops straight in:
-#   * 3.048  mm NPTH  at cy - 6.985  (positioning hole, behind the switch)
-#   * 3.9878 mm NPTH  at cy + 8.225  (mounting hole, front / user side)
+# ------------------------------------------------- Choc v2 PCB stabilizer
+# Kailh Choc v2 PCB mount stabilizer (Salicylic-acid3 / Keeb-On! part), 2.00 u
+# pattern.  It differs from the Cherry MX one in the clip holes and in that the
+# housing hangs through the PCB, so every wide key also needs two Edge.Cuts
+# cutouts:
+#   * 3.2 x 3.4  mm oval NPTH at (+-11.9, cy - 6.2)   (clip hole, back)
+#   * 3.0 x 4.0  mm oval NPTH at (+-11.9, cy + 8.24)  (screw hole, front)
+#   * cutout x = 8.9 .. 14.9 (mirrored), y = cy - 3.75 .. cy + 3.75
 STAB_MIN_U = 2.0            # every key this wide or wider gets a stabilizer
-STAB_HOLE_X = 11.938        # hole offset from the key centre, left and right
-STAB_SMALL = (3.048, -6.985)     # (drill diameter, y offset)
-STAB_BIG = (3.9878, 8.225)
+# (dx from the key centre, dy from the key centre, size along x, size along y)
+STAB_HOLES = ((11.9, -6.2, 3.2, 3.4), (11.9, 8.24, 3.0, 4.0))
+STAB_CUTOUT = (8.9, -3.75, 14.9, 3.75)   # right hand cutout; mirrored in x
 
 
 def stab_keys(hand):
@@ -198,14 +208,28 @@ def stab_keys(hand):
 
 
 def stab_holes(hand):
-    """The four stabilizer holes of every wide key, in board coordinates."""
+    """The four oval clip holes of every wide key, in board coordinates."""
     out = []
     for k in stab_keys(hand):
         for sx in (-1, 1):
-            for drill, dy in (STAB_SMALL, STAB_BIG):
+            for dx, dy, w, h in STAB_HOLES:
                 out.append(dict(ref=k["ref"], label=k["label"], wu=k["wu"],
-                                x=k["cx"] + sx * STAB_HOLE_X,
-                                y=k["cy"] + dy, d=drill))
+                                x=k["cx"] + sx * dx, y=k["cy"] + dy,
+                                w=w, h=h, d=max(w, h)))
+    return out
+
+
+def stab_cutouts(hand):
+    """The two Edge.Cuts rectangles of every wide key, in board coordinates."""
+    out = []
+    for k in stab_keys(hand):
+        x0, y0, x1, y1 = STAB_CUTOUT
+        out.append(dict(ref=k["ref"], label=k["label"],
+                        x0=k["cx"] - x1, y0=k["cy"] + y0,
+                        x1=k["cx"] - x0, y1=k["cy"] + y1, side="left"))
+        out.append(dict(ref=k["ref"], label=k["label"],
+                        x0=k["cx"] + x0, y0=k["cy"] + y0,
+                        x1=k["cx"] + x1, y1=k["cy"] + y1, side="right"))
     return out
 
 

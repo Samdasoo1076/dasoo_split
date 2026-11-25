@@ -11,8 +11,9 @@ checks, for each half:
   4. Edge.Cuts forms a single closed loop and all copper is inside
   5. all tracks are 0/45/90 degrees and respect the minimum width
   6. a GND zone exists on both copper layers
-  7. every switch of 2 u and wider carries the four holes of the Cherry MX PCB
-     mount stabilizer (2.00 u pattern) and no copper comes near them
+  7. every switch of 2 u and wider carries the Kailh Choc v2 PCB mount
+     stabilizer (4 oval clip holes of the 2.00 u pattern plus the two Edge.Cuts
+     cutouts) and no copper comes near the holes or the cutouts
 
 Usage:  python3 scripts/verify_pcb.py [pcb/*.kicad_pcb ...]
 """
@@ -24,16 +25,21 @@ from collections import defaultdict
 
 CLEAR = 0.20          # copper to copper clearance (mm)
 EDGE_CLEAR = 0.30     # copper to board edge
-HOLE_CLEAR = 0.20     # copper to NPTH hole edge
+HOLE_CLEAR = 0.30     # copper to NPTH hole / board cutout edge
 MIN_W = 0.25          # thinnest track we accept
 TOL = 1e-6
 
-# Cherry MX PCB mount stabilizer, 2.00 u hole pattern (the same holes serve the
-# 2.25 u keys): 11.938 mm beside the key centre, a 3.048 mm positioning hole
-# behind the switch and a 3.9878 mm mounting hole towards the front.
+# Kailh Choc v2 PCB mount stabilizer, 2.00 u pattern (Salicylic-acid3 /
+# Keeb-On! part, the same footprint serves the 2.25 u keys):
+#   3.2 x 3.4 mm oval NPTH at (+-11.9, -6.2), 3.0 x 4.0 mm oval NPTH at
+#   (+-11.9, +8.24), and two board cutouts x = 8.9 .. 14.9 (mirrored),
+#   y = -3.75 .. +3.75.
 STAB_MIN_U = 2.0
-STAB_X = 11.938
-STAB_PATTERN = ((3.048, -6.985), (3.9878, 8.225))
+STAB_HOLES = ((11.9, -6.2, 3.2, 3.4), (11.9, 8.24, 3.0, 4.0))
+STAB_CUTOUT = (8.9, -3.75, 14.9, 3.75)
+CHOC_V2_PREFIX = "SW_Hotswap_Kailh_Choc_V2_"
+V2_POST = (-5.0, 5.15, 1.8, 2.2)      # x, y, size along x, size along y
+V1_PEG = (5.5, 0.0, 1.9)              # x, y, drill -- must be gone
 
 # --------------------------------------------------------------------- parser
 TOKEN = re.compile(r'\(|\)|"(?:[^"\\]|\\.)*"|[^\s()"]+')
@@ -176,6 +182,46 @@ def poly_dist(P, Q):
     return best
 
 
+def cutout_rects(lines):
+    """Group Edge.Cuts segments into closed loops and return their boxes."""
+    def key(p):
+        return (round(p[0], 4), round(p[1], 4))
+
+    remaining = list(range(len(lines)))
+    loops = []
+    while remaining:
+        i = remaining.pop(0)
+        loop = [lines[i]]
+        start, cur = key(lines[i][0]), key(lines[i][1])
+        while cur != start and remaining:
+            found = None
+            for j in remaining:
+                if key(lines[j][0]) == cur:
+                    found = (j, key(lines[j][1]))
+                    break
+                if key(lines[j][1]) == cur:
+                    found = (j, key(lines[j][0]))
+                    break
+            if not found:
+                break
+            j, nxt = found
+            remaining.remove(j)
+            loop.append(lines[j])
+            cur = nxt
+        loops.append(loop)
+    out = []
+    for loop in loops:
+        pts = [p for a, b in loop for p in (a, b)]
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        closed = abs(loop[-1][1][0] - loop[0][0][0]) < 1e-6 and \
+            abs(loop[-1][1][1] - loop[0][0][1]) < 1e-6
+        per = sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in loop)
+        out.append(dict(x0=min(xs), y0=min(ys), x1=max(xs), y1=max(ys),
+                        edges=len(loop), closed=closed, perimeter=per))
+    return out
+
+
 # --------------------------------------------------------------------- items
 class Item:
     def __init__(self, kind, net, layers, bbox, **kw):
@@ -290,12 +336,14 @@ def load(path):
             poly = poly_of(gx, gy, w, h, gang, shape)
             if atyp == "np_thru_hole":
                 if hole:
+                    hshape = "oval" if abs(hole[0] - hole[1]) > 1e-9 else "circle"
                     b.pads.append(Item("pad", None, ["F.Cu", "B.Cu"],
                                        (gx - hole[0] / 2, gy - hole[1] / 2,
                                         gx + hole[0] / 2, gy + hole[1] / 2),
-                                       poly=poly_of(gx, gy, hole[0], hole[1], gang, "circle"),
+                                       poly=poly_of(gx, gy, hole[0], hole[1], gang, hshape),
                                        num="", ref=ref, fp=fname, x=gx, y=gy,
-                                       w=hole[0], h=hole[1], hole=None, shape="hole"))
+                                       w=hole[0], h=hole[1], hole=None, shape="hole",
+                                       holdw=hole[0], holdh=hole[1], gang=gang))
                 continue
             it = Item("pad", net, layers,
                       (min(p[0] for p in poly), min(p[1] for p in poly),
@@ -348,6 +396,27 @@ def load(path):
         st = kid(g, "start")
         en = kid(g, "end")
         b.graphics.append((lay, (fnum(st[1]), fnum(st[2])), (fnum(en[1]), fnum(en[2]))))
+    # board cutouts live on Edge.Cuts inside the footprints (the stabilizer
+    # housings); collect them separately from the board outline
+    b.cutout_lines = []
+    for fp in kids(root, "footprint"):
+        at = kid(fp, "at")
+        px, py = fnum(at[1]), fnum(at[2])
+        pang = fnum(at[3]) if len(at) > 3 else 0.0
+        side = "F" if kid(fp, "layer")[1] == "F.Cu" else "B"
+        for ln in kids(fp, "fp_line"):
+            if kid(ln, "layer")[1] != "Edge.Cuts":
+                continue
+            st, en = kid(ln, "start"), kid(ln, "end")
+            a = (fnum(st[1]), fnum(st[2]))
+            c = (fnum(en[1]), fnum(en[2]))
+            if side == "B":
+                a = (-a[0], a[1])
+                c = (-c[0], c[1])
+            a = (a[0] + px, a[1] + py)
+            c = (c[0] + px, c[1] + py)
+            b.cutout_lines.append((a, c))
+    b.cutouts = cutout_rects(b.cutout_lines)
     for z in kids(root, "zone"):
         lay = kid(z, "layer")
         netn = kid(z, "net_name")
@@ -565,19 +634,39 @@ def check_matrix(b):
     return errs
 
 
-def check_stab(b):
-    """Stabilizer holes of the wide keys and the copper clearance around them.
+def _loc(lx, ly, cx, cy, ang):
+    """Footprint local coordinate -> board coordinate (KiCad, y down)."""
+    a = math.radians(ang)
+    c, s = math.cos(a), math.sin(a)
+    return (cx + lx * c + ly * s, cy - lx * s + ly * c)
 
-    A 2 u (or wider) key is useless without a stabilizer, so every switch that
-    wide must carry the four NPTH holes of the standard Cherry MX PCB mount
-    pattern, and neither track, via nor pad may come inside the clearance.
-    Returns ``(errors, report)`` where report is one tuple per stabilizer.
+
+def _switch_angle(pads, cx, cy):
+    """Recover the placement angle of a switch from its pad 1 (-3.5, -6.0)."""
+    p1 = [p for p in pads if p.shape != "hole" and p.num == "1"]
+    if not p1:
+        return 0.0
+    for ang in (0.0, 90.0, 180.0, -90.0):
+        ex, ey = _loc(-3.5, -6.0, cx, cy, ang)
+        if math.hypot(p1[0].x - ex, p1[0].y - ey) < 0.01:
+            return ang
+    return 0.0
+
+
+def check_stab(b):
+    """Choc v2 stabilizer of the wide keys, and the copper clearance around it.
+
+    Every switch of 2 u and wider must carry the four oval clip holes of the
+    Kailh Choc v2 PCB mount stabilizer, the two Edge.Cuts cutouts its housing
+    hangs through, and the v2 guide post hole of the switch itself (and must not
+    carry v1's side pegs, which is what makes the board v2 only).
+    Returns ``(errors, report)`` with one tuple per stabilizer.
     """
     errs = []
     holes = [p for p in b.pads if p.shape == "hole"]
     groups = defaultdict(list)
     for p in b.pads:
-        if p.fp and "SW_Hotswap_Kailh_Choc_V1_" in p.fp:
+        if p.fp and CHOC_V2_PREFIX in p.fp:
             groups[(p.ref, p.fp)].append(p)
     copper = [p for p in b.pads if p.shape != "hole" and p.net] + b.tracks + b.vias
     report = []
@@ -591,17 +680,36 @@ def check_stab(b):
             errs.append("%s: cannot locate the switch centre hole" % ref)
             continue
         cx, cy = centre[0].x, centre[0].y
+        # the switch of a stabilizer key is turned 90 degrees, so map the local
+        # feature coordinates with the rotation the footprint was placed at
+        ang = _switch_angle(pads, cx, cy)
+        px, py, pw, ph = V2_POST
+        ex, ey = _loc(px, py, cx, cy, ang)
+        post = [h for h in holes
+                if math.hypot(h.x - ex, h.y - ey) < 0.01
+                and abs(h.w - pw) < 0.01 and abs(h.h - ph) < 0.01]
+        if not post:
+            errs.append("%s: no %.1f x %.1f mm v2 guide post hole at (%.2f, %.2f)"
+                        % (ref, pw, ph, ex, ey))
+        for sx in (-1, 1):
+            vx, vy, vd = V1_PEG
+            gx, gy = _loc(sx * vx, vy, cx, cy, ang)
+            for h in holes:
+                if math.hypot(h.x - gx, h.y - gy) < 0.01 and abs(h.w - vd) < 0.02:
+                    errs.append("%s: v1 side peg hole still at (%.2f, %.2f)"
+                                % (ref, h.x, h.y))
+        # the four clip holes and their clearance
         found = 0
         worst = None
         for sx in (-1, 1):
-            for drill, dy in STAB_PATTERN:
-                ex, ey = cx + sx * STAB_X, cy + dy
+            for dx, dy, w, hgt in STAB_HOLES:
+                ex, ey = cx + sx * dx, cy + dy
                 near = [h for h in holes
                         if math.hypot(h.x - ex, h.y - ey) < 0.01
-                        and abs(h.w - drill) < 0.01]
+                        and abs(h.w - w) < 0.01 and abs(h.h - hgt) < 0.01]
                 if not near:
-                    errs.append("%s (%.2fu): no %.4f mm hole at (%.2f, %.2f)"
-                                % (ref, width, drill, ex, ey))
+                    errs.append("%s (%.2fu): no %.1f x %.1f mm hole at (%.2f, %.2f)"
+                                % (ref, width, w, hgt, ex, ey))
                     continue
                 found += 1
                 h = near[0]
@@ -612,14 +720,56 @@ def check_stab(b):
                     d = item_dist(c, h, None)
                     if d < dmin:
                         dmin, who = d, c
-                if dmin < CLEAR - 0.001:
-                    errs.append("%s: copper %.3f mm from the %.4f mm stab hole at "
-                                "(%.2f, %.2f) [%s]"
-                                % (ref, dmin, drill, h.x, h.y, _tag(who)))
+                if dmin < HOLE_CLEAR - 0.001:
+                    errs.append("%s: copper %.3f mm from the %.1f x %.1f mm stab hole "
+                                "at (%.2f, %.2f) [%s]"
+                                % (ref, dmin, w, hgt, h.x, h.y, _tag(who)))
                 if worst is None or dmin < worst[0]:
-                    worst = (dmin, drill, h, who)
+                    worst = (dmin, w, hgt, h, who)
         report.append((ref, width, found, worst))
     return errs, report
+
+
+def check_cutouts(b, outline):
+    """Stabilizer cutouts: closed, inside the board, and clear of copper.
+
+    Returns ``(errors, report)``; report is ``(n, min_copper_distance)``.
+    """
+    errs = []
+    cos = getattr(b, "cutouts", [])
+    x0b, y0b, x1b, y1b = outline
+    copper = [p for p in b.pads if p.shape != "hole" and p.net] + b.tracks + b.vias
+    dmin = 1e9
+    for c in cos:
+        if not c["closed"] or c["edges"] != 4:
+            errs.append("cutout at (%.2f, %.2f) is not a closed 4 sided loop "
+                        "(%d edges, closed=%s)"
+                        % (c["x0"], c["y0"], c["edges"], c["closed"]))
+            continue
+        w, h = c["x1"] - c["x0"], c["y1"] - c["y0"]
+        if abs(c["perimeter"] - 2 * (w + h)) > 1e-3:
+            errs.append("cutout at (%.2f, %.2f) is not rectangular" % (c["x0"], c["y0"]))
+        if (c["x0"] < x0b + EDGE_CLEAR or c["y0"] < y0b + EDGE_CLEAR
+                or c["x1"] > x1b - EDGE_CLEAR or c["y1"] > y1b - EDGE_CLEAR):
+            errs.append("cutout at (%.2f, %.2f)-(%.2f, %.2f) reaches the board edge"
+                        % (c["x0"], c["y0"], c["x1"], c["y1"]))
+        poly = [(c["x0"], c["y0"]), (c["x1"], c["y0"]),
+                (c["x1"], c["y1"]), (c["x0"], c["y1"])]
+        box = (c["x0"], c["y0"], c["x1"], c["y1"])
+        for it in copper:
+            if not bbox_overlap(box, it.bbox_expanded(HOLE_CLEAR)):
+                continue
+            if it.kind == "track":
+                d = max(0.0, seg_poly_dist(it.a, it.b, poly) - it.w / 2.0)
+            elif it.kind == "via":
+                d = max(0.0, pt_poly_dist((it.x, it.y), poly) - it.r)
+            else:
+                d = poly_dist(it.poly, poly)
+            dmin = min(dmin, d)
+            if d < HOLE_CLEAR - 0.001:
+                errs.append("copper %.3f mm from the cutout at (%.2f, %.2f) [%s]"
+                            % (d, c["x0"], c["y0"], _tag(it)))
+    return errs, (len(cos), dmin)
 
 
 def check_zones(b):
@@ -662,16 +812,19 @@ def main(argv):
         errs += check_angles(b)
         stab_errs, stab = check_stab(b)
         errs += stab_errs
+        cut_errs, (n_cut, cut_min) = check_cutouts(b, outline)
+        errs += cut_errs
         n_pads = len([p for p in b.pads if p.shape != "hole"])
         print("  pads=%d tracks=%d vias=%d nets=%d" %
               (n_pads, len(b.tracks), len(b.vias), len(b.nets)))
         n_stab = sum(1 for r in stab)
-        print("  stabilizers=%d holes=%d" % (n_stab, 4 * n_stab))
+        print("  stabilizers=%d holes=%d cutouts=%d (nearest copper %.3f mm)"
+              % (n_stab, 4 * n_stab, n_cut, cut_min))
         for ref, width, found, worst in stab:
             line = "    %-5s %.2fu: %d/4 holes" % (ref, width, found)
             if worst:
-                line += ", nearest copper %.3f mm (%.4f mm hole at %.2f, %.2f)" % (
-                    worst[0], worst[1], worst[2].x, worst[2].y)
+                line += ", nearest copper %.3f mm (%.1f x %.1f hole at %.2f, %.2f)" % (
+                    worst[0], worst[1], worst[2], worst[3].x, worst[3].y)
             print(line)
         if errs:
             rc = 1

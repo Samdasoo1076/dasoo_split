@@ -104,20 +104,38 @@ class Footprint:
 
 # --------------------------------------------------------------- definitions
 def choc_hotswap(width_u):
-    """Kailh Choc v1 hot swap footprint (geometry from the
-    keyswitch-kicad-library `SW_Hotswap_Kailh_Choc_V1V2` footprint)."""
+    """Kailh Choc v2 (CPG1353) hot swap footprint.
+
+    The contacts are the ones of the Choc hot swap socket CPG135001S30, and
+    Kailh's own v2 drawing (CPG135301D01) puts the two switch pins at exactly
+    the Choc v1 positions, so the two 2.55 x 2.5 mm socket pads and the two
+    3.05 mm socket legs keep the coordinates of the proven v1 footprint.  What
+    is v2 only:
+
+      * the centre hole clears the Ø5.00 v2 mounting post (v1 is Ø3.40),
+      * v1's two Ø1.90 side pegs at x = +-5.5 are gone (a v1 switch no longer
+        fits this board),
+      * v2 has one Ø1.60 guide post at Kailh's (-5.15, -5.00), which in this
+        footprint's frame is (-5.00, +5.15) -- the same rotation that maps
+        Kailh's pin coordinates onto the socket legs.  The hole is a
+        1.8 x 2.2 mm slot (long axis along Y) so that the post enters even when
+        it is the 2 x 1.5 mm rectangular post drawn in `Kailh_PG1353_Hotswap`
+        (ai03, 1.5 x 2 oval) and so that switch swaps are not a press fit.
+    """
     key_w = width_u * U
     pads = [
         dict(num="1", kind="smd", shape="roundrect", lx=-3.5, ly=-6.0,
              w=2.55, h=2.5, layers=("B.Cu", "B.Mask", "B.Paste"), rratio=0.1),
         dict(num="2", kind="smd", shape="roundrect", lx=8.5, ly=-3.8,
              w=2.55, h=2.5, layers=("B.Cu", "B.Mask", "B.Paste"), rratio=0.1),
-        dict(num="", kind="np_thru_hole", shape="circle", lx=0, ly=-5.9, w=3.05, drill=(3.05, 3.05)),
-        dict(num="", kind="np_thru_hole", shape="circle", lx=5, ly=-3.8, w=3.05, drill=(3.05, 3.05)),
-        dict(num="", kind="np_thru_hole", shape="circle", lx=0, ly=0, w=5.05, drill=(5.05, 5.05)),
-        dict(num="", kind="np_thru_hole", shape="circle", lx=-5.5, ly=0, w=1.9, drill=(1.9, 1.9)),
-        dict(num="", kind="np_thru_hole", shape="circle", lx=5.5, ly=0, w=1.9, drill=(1.9, 1.9)),
-        dict(num="", kind="np_thru_hole", shape="circle", lx=-5, ly=5.15, w=1.6, drill=(1.6, 1.6)),
+        dict(num="", kind="np_thru_hole", shape="circle", lx=0, ly=-5.9, w=3.05,
+             drill=(3.05, 3.05), layers=("*.Cu", "*.Mask")),
+        dict(num="", kind="np_thru_hole", shape="circle", lx=5, ly=-3.8, w=3.05,
+             drill=(3.05, 3.05), layers=("*.Cu", "*.Mask")),
+        dict(num="", kind="np_thru_hole", shape="circle", lx=0, ly=0, w=5.05,
+             drill=(5.05, 5.05), layers=("*.Cu", "*.Mask")),
+        dict(num="", kind="np_thru_hole", shape="oval", lx=-5, ly=5.15,
+             w=1.8, h=2.2, drill=(1.8, 2.2), layers=("*.Cu", "*.Mask")),
     ]
     g = []
     # switch body outline
@@ -137,10 +155,10 @@ def choc_hotswap(width_u):
     g += [("line", (-1.0, 7.0), (1.0, 7.0), "F.SilkS", 0.12),
           ("line", (0, 6.0), (0, 8.0), "F.SilkS", 0.12)]
     return dict(
-        name="SW_Hotswap_Kailh_Choc_V1_%s" % ("%.2fu" % width_u),
+        name="SW_Hotswap_Kailh_Choc_V2_%s" % ("%.2fu" % width_u),
         attr="smd",
-        descr="Kailh Choc v1 (CPG1350) hot swap socket, %.2fu key" % width_u,
-        tags="kailh choc hotswap low profile",
+        descr="Kailh Choc v2 (CPG1353) hot swap socket, %.2fu key" % width_u,
+        tags="kailh choc v2 hotswap low profile",
         pads=pads, graphics=g)
 
 
@@ -322,42 +340,62 @@ def mount_hole_m2():
                 pads=pads, graphics=g)
 
 
-def stabilizer_cherry_mx_2u():
-    """Cherry MX PCB mount stabilizer, 2.00 u hole pattern.
+def stabilizer_choc_v2_2u():
+    """Kailh Choc v2 PCB mount stabilizer, 2.00 u pattern.
 
-    The same footprint serves 2.00 / 2.25 / 2.50 / 2.75 u keys: the holes sit
-    11.938 mm left and right of the key centre regardless of the key width.
-    Hole offsets and drills are copied from the keyswitch-kicad-library
-    ``Mounting_Keyboard_Stabilizer.pretty/Stabilizer_Cherry_MX_2.00u``
-    footprint (3.048 mm positioning hole behind the switch, 3.9878 mm
-    mounting hole towards the front of the key), so a stock part fits.
-    The housing outlines are drawn on F.Fab: on F.SilkS they would sit 0.06 mm
-    from the neighbouring key's switch outline.
+    Geometry copied from Salicylic-acid3's
+    ``kbd_Stabilizer.pretty/Choc_v2_PCBMountStab_2u`` (the Keeb-On! screw in
+    Choc v2 stabilizer), which is measured from the real part and validated on
+    1.6 mm boards:
+
+      * four oval NPTH clip holes, at x = +-11.9:  3.2 x 3.4 mm at y = -6.2 and
+        3.0 x 4.0 mm at y = +8.24,
+      * two rectangular board cutouts on Edge.Cuts, x = 8.9 .. 14.9 (mirrored),
+        y = -3.75 .. +3.75, where the stabilizer housing hangs through the PCB.
+
+    The same footprint serves 2.00 / 2.25 / 2.50 / 2.75 u keys.  It does *not*
+    accept Cherry MX stabilizers and vice versa, and the housing needs the two
+    cutouts, so the switch of such a key has to be turned 90 degrees (Salicylic
+    recommends exactly that: with the switch in line the socket collides with
+    the protrusion on the back of the stabilizer).
     """
     pads = []
     for sx in (-1, 1):
-        for drill, dy in ((3.048, -6.985), (3.9878, 8.225)):
-            pads.append(dict(num="", kind="np_thru_hole", shape="circle",
-                            lx=sx * 11.938, ly=dy, w=drill, drill=(drill, drill),
-                            layers=("*.Cu", "*.Mask")))
+        pads.append(dict(num="", kind="np_thru_hole", shape="oval",
+                         lx=sx * 11.9, ly=-6.2, w=3.2, h=3.4, drill=(3.2, 3.4),
+                         layers=("*.Cu", "*.Mask")))
+        pads.append(dict(num="", kind="np_thru_hole", shape="oval",
+                         lx=sx * 11.9, ly=8.24, w=3.0, h=4.0, drill=(3.0, 4.0),
+                         layers=("*.Cu", "*.Mask")))
     g = []
+    # board cutout where the stabilizer housing sits below the PCB
     for sx in (-1, 1):
-        x0 = 8.563 if sx > 0 else -15.313
-        x1 = 15.313 if sx > 0 else -8.563
-        for (a, b) in (((x0, -5.53), (x1, -5.53)), ((x1, -5.53), (x1, 6.77)),
-                       ((x1, 6.77), (x0, 6.77)), ((x0, 6.77), (x0, -5.53))):
-            g.append(("line", a, b, "F.Fab", 0.1))
-    # stabilizer wire, drawn under the key cap
-    g += [("line", (-11.938, -4.0), (11.938, -4.0), "F.Fab", 0.1)]
-    return dict(name="Stabilizer_Cherry_MX_2.00u", attr="through_hole",
-                descr="Cherry MX PCB mount stabilizer 2.00-2.75u (4 NPTH holes)",
-                tags="stabilizer Cherry MX PCB mount",
+        x0, x1 = (8.9, 14.9) if sx > 0 else (-14.9, -8.9)
+        g += [("line", (x0, -3.75), (x1, -3.75), "Edge.Cuts", 0.05),
+              ("line", (x1, -3.75), (x1, 3.75), "Edge.Cuts", 0.05),
+              ("line", (x1, 3.75), (x0, 3.75), "Edge.Cuts", 0.05),
+              ("line", (x0, 3.75), (x0, -3.75), "Edge.Cuts", 0.05)]
+    # housing outline and the four body corners of the 2 u key, on F.Fab
+    g += [("line", (-19.05, -9.525), (19.05, -9.525), "F.Fab", 0.15),
+          ("line", (19.05, -9.525), (19.05, 9.525), "F.Fab", 0.15),
+          ("line", (19.05, 9.525), (-19.05, 9.525), "F.Fab", 0.15),
+          ("line", (-19.05, 9.525), (-19.05, -9.525), "F.Fab", 0.15)]
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            g += [("line", (sx * 7.0, sy * 7.0), (sx * 6.0, sy * 7.0), "F.Fab", 0.15),
+                  ("line", (sx * 7.0, sy * 7.0), (sx * 7.0, sy * 6.0), "F.Fab", 0.15)]
+    # stabilizer wire, under the key cap
+    g += [("line", (-8.0, 8.24), (8.0, 8.24), "F.SilkS", 0.12)]
+    return dict(name="Stabilizer_Choc_V2_PCBMount_2u", attr="through_hole",
+                descr="Kailh Choc v2 PCB mount stabilizer 2.00-2.75u "
+                      "(4 oval NPTH holes + 2 Edge.Cuts cutouts)",
+                tags="stabilizer Choc v2 PCB mount",
                 pads=pads, graphics=g)
 
 
 FACTORY = {
     "choc": choc_hotswap,
-    "stab": stabilizer_cherry_mx_2u,
+    "stab": stabilizer_choc_v2_2u,
     "diode": diode_sod123,
     "mcu": pro_micro_rp2040,
     "trrs": trrs_pj320a,

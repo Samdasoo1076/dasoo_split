@@ -1,7 +1,7 @@
 # choc-split-60 ⌨️
 
 로우스태거(row‑staggered) 배열을 좌우로 나눈 **스플릿 키보드**입니다.
-Kailh **Choc v1 로우프로파일 핫스왑** 스위치 **71개 + 로터리 인코더 1개 = 72키 포지션**
+Kailh **Choc v2(CPG1353) 로우프로파일 핫스왑** 스위치 **71개 + 로터리 인코더 1개 = 72키 포지션**
 (좌 34 / 우 38), 좌우 각각 **RP2040 Pro Micro**, TRRS 4극 케이블 통신, `COL2ROW` 매트릭스를 씁니다.
 모든 PCB 배선은 자동 라우터 없이 좌표를 계산해 직접 배선했고, `scripts/verify_pcb.py`로 전수 검증합니다.
 
@@ -26,13 +26,13 @@ Kailh **Choc v1 로우프로파일 핫스왑** 스위치 **71개 + 로터리 인
 |---|---|
 | 배열 | 65% 로우스태거 + 좌측 매크로 열 + 우측 방향키·Del, 좌우 분리 |
 | 키 수 | 좌 33 스위치 + 인코더 1 / 우 38 스위치 = **스위치 71 + 엔코더 1 (72 포지션)** |
-| 키 피치 | 19.05 mm (MX 표준 피치, Choc v1 스위치/키캡 사용) |
+| 키 피치 | 19.05 mm (MX 표준 피치, Choc v2 스위치 + MX 호환 키캡) |
 | 행 스태거 | 좌 `0 / 0.5u / 0.75u / 1.25u` · 우 `-0.5 / 0 / 0.25 / -0.5u` (Tab 1.5u·Caps 1.75u·LShift 2.25u·`\` 1.5u·RShift **1u**) |
 | 분할 위치 | 숫자열 `6`\|`7`, 알파열 `T`\|`Y`, `G`\|`H` — 하단 알파열은 `B` 가 **양쪽 하프에 하나씩** 있습니다(아래 설명) |
 | 매크로 열 | 좌측 최외곽 열에서 **0.25u(4.7625 mm)** 띄워 배치, 위→아래 `노브 → Home → End → PgUp → PgDn` |
 | 방향키 | `RShift`(1u) 바로 오른쪽 `↑`, 그 아래 `↓`, `↑` 오른쪽에 `Del`, `Del`/`↓` 아래에 `→`, 그 왼쪽 `←`. `RCtrl` 과 `←` 사이는 **0.5u 빈칸**(예전 `RFn` 자리) |
-| 스태빌라이저 | **2u 이상 키 5개**에 체리 MX PCB 마운트 스태빌 홀 — 좌 `LShift`(2.25u)·`Space`(2u) / 우 `BSpc`(2u)·`Enter`(2.25u)·`Space`(2.25u), 홀 4개씩 총 20개 (NPTH 3.048 / 3.9878 mm, 중심에서 좌우 ±11.938 mm) |
-| 스위치 | Kailh Choc v1 (CPG1350), **핫스왑 소켓** (`SW_Hotswap_Kailh_Choc_V1`) |
+| 스태빌라이저 | **2u 이상 키 5개**에 **Choc v2 PCB 마운트 스태빌**(Salicylic‑acid3 / Keeb‑On! 스크류 타입) — 좌 `LShift`(2.25u)·`Space`(2u) / 우 `BSpc`(2u)·`Enter`(2.25u)·`Space`(2.25u). 키마다 타원 홀 4개(3.2×3.4 / 3.0×4.0 mm, 중심에서 좌우 ±11.9 mm) + 하우징이 지나가는 **Edge.Cuts 컷아웃 2개**(x 8.9~14.9, y ±3.75 mm) = 홀 20 + 컷아웃 10 |
+| 스위치 | Kailh Choc v2 (CPG1353), **핫스왑 소켓** (`SW_Hotswap_Kailh_Choc_V2`) — **Choc v1 스위치는 장착 불가**(v1 가이드 페그 홀 제거, v2는 중심 홀 Ø5.0 + 가이드 포스트 1개) |
 | 인코더 | Alps EC11 / Bourns PEC11R 호환 5핀 (A·C·B + 푸시 스위치 2핀), 6 mm 축 |
 | 다이오드 | 1N4148W SOD-123 × 72 (스위치 71 + 인코더 푸시 1), `COL2ROW` |
 | MCU | RP2040 Pro Micro (Elite‑Pi / Pro Micro RP2040 호환, 24핀) × 2 |
@@ -156,11 +156,19 @@ ANSI 스태거(`T`|`Y`, `G`|`H`, `B`|`N`)를 그대로 가집니다. 다만 **�
 
 * 행(Row) 버스는 **F.Cu에 가로**로, 열(Col)은 **B.Cu에 세로**로 배선하고, 두 방향이 교차하는 지점은
   비아로 층을 바꿔 같은 층 쇼트를 만들지 않습니다.
-* 행 버스는 2u 이상 키의 **스태빌 마운트 홀을 만나면 45도로 위로 비켜 갔다가 되돌아옵니다**
+* 행 버스는 2u 이상 키의 **스태빌 타원 홀을 만나면 45도로 위로 비켜 갔다가 되돌아옵니다**
   (홀 테두리에서 0.5 mm, 구리 기준 0.375 mm 이격). 홀 아래쪽은 다음 행의 홀·패드가 시작되는
   자리라 항상 위로 우회합니다.
-* 스태빌 홀 20개는 **양면 기판 관통 NPTH**로, 라우터가 트랙·비아를 놓을 때 장애물로 계산합니다
+* 스태빌 타원 홀 20개는 **양면 기판 관통 NPTH**로, 라우터가 트랙·비아를 놓을 때 장애물로 계산합니다
   (스위치 홀·핫스왑 패드·다이오드·마운팅 홀·TRRS/리셋/인코더 패드와 같은 취급).
+* 스태빌 **컷아웃 10개(Edge.Cuts 사각 6×7.5 mm)** 는 보드에서 잘려 나가는 영역이라, 라우터가
+  트랙·비아를 놓을 때 사각형을 0.5 mm 부풀려 통행 금지 구역으로 잡습니다(실제 구리 이격 0.35 mm 이상).
+* **2u 이상 키의 스위치는 90도 돌려 배치**했습니다. 핫스왑 소켓 패드가 정렬된 채로는 소켓 패드
+  2번(x +8.5)이 오른쪽 컷아웃(x 8.9~14.9) 모서리를 파고들고, 소켓 몸체도 스태빌 하우징의 뒤쪽
+  돌출부와 부딪힙니다(제작자 Salicylic‑acid3도 "스위치를 옆으로 돌리라"고 안내). 90도 회전 시
+  소켓 패드는 x −7.3~+7.3 안에 들어와 컷아웃과 0.2 mm 이상 떨어집니다.
+* 회전한 키는 소켓 패드 2번이 (cx+3.8, cy+8.5)로 내려오므로, 그 키의 다이오드를 x 6.75 → 7.68 mm로
+  살짝 밀고 스텁을 다이오드 캐소드 **아래로 내려** 애노드 패드에 붙입니다(캐소드 관통 회피).
 * 신호선 **0.25 mm**, 전원(VCC/GND) **0.5 mm**, 비아 **0.6 / 0.3 mm(드릴)**.
 * 동일 층 타 네트 교차 0건, 최소 클리어런스 **0.2 mm**, 보드 외곽 이격 **0.3 mm**.
 * 모든 트랙은 0/45/90도. 스위치 홀·핫스왑 패드·마운팅 홀·TRRS/리셋/인코더 패드를 장애물로 계산해 회피.
@@ -180,31 +188,35 @@ ANSI 스태거(`T`|`Y`, `G`|`H`, `B`|`N`)를 그대로 가집니다. 다만 **�
 3. 스위치–다이오드 1:1 매칭, 극성(캐소드→행, 애노드→스위치) 일치
 4. `Edge.Cuts` 폐곡선 및 외곽 이격
 5. 트랙 0/45/90도, 최소 폭, GND 존 존재
-6. **2u 이상 스위치마다 체리 MX PCB 마운트 스태빌 홀 4개(3.048 / 3.9878 mm, ±11.938 mm)가
-   정확한 위치에 있는지**, 그리고 그 홀에서 어떤 구리(트랙·비아·패드)도 0.2 mm 안에
+6. **2u 이상 스위치마다 Choc v2 스태빌 타원 홀 4개(3.2×3.4 / 3.0×4.0 mm, ±11.9 mm)가
+   정확한 위치에 있는지**, v2 가이드 포스트 홀(1.8×2.2 mm 슬롯, 회전 각도 반영)이 있고
+   **v1 페그 홀(Ø1.9, ±5.5)이 남아 있지 않은지**, 그리고 그 홀에서 어떤 구리도 0.3 mm 안에
    들어오지 않는지
+7. **스태빌 컷아웃 10개가 각각 닫힌 사각 루프이고 보드 안쪽에 있으며, 구리와 0.3 mm 이상
+   떨어져 있는지**
 
 ```
 $ python3 scripts/verify_pcb.py
 ======================================================================
 checking choc-split-60-left.kicad_pcb
-  pads=171 tracks=241 vias=39 nets=55
-  stabilizers=2 holes=8
-    SW23  2.25u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 9.49, 74.90)
-    SW33  2.00u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 88.07, 93.95)
+  pads=171 tracks=251 vias=43 nets=55
+  stabilizers=2 holes=8 cutouts=4 (nearest copper 1.815 mm)
+    SW23  2.25u: 4/4 holes, nearest copper 0.320 mm (3.0 x 4.0 hole at 33.33, 74.91)
+    SW33  2.00u: 4/4 holes, nearest copper 0.320 mm (3.0 x 4.0 hole at 111.91, 93.96)
   OK: all checks passed
 ======================================================================
 checking choc-split-60-right.kicad_pcb
-  pads=184 tracks=295 vias=56 nets=58
-  stabilizers=3 holes=12
-    SW23  2.25u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 128.56, 55.85)
-    SW33  2.25u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 38.13, 93.95)
-    SW8   2.00u: 4/4 holes, nearest copper 0.350 mm (3.9878 mm hole at 130.94, 17.75)
+  pads=184 tracks=271 vias=51 nets=58
+  stabilizers=3 holes=12 cutouts=6 (nearest copper 2.151 mm)
+    SW23  2.25u: 4/4 holes, nearest copper 0.320 mm (3.0 x 4.0 hole at 152.39, 55.87)
+    SW33  2.25u: 4/4 holes, nearest copper 0.320 mm (3.0 x 4.0 hole at 38.09, 93.96)
+    SW8   2.00u: 4/4 holes, nearest copper 0.320 mm (3.0 x 4.0 hole at 154.78, 17.77)
   OK: all checks passed
 ```
 
-> 스태빌 홀 20개 중 가장 가까운 구리가 **0.350 mm**(행 버스 중심선 0.5 mm − 트랙 반폭 0.125 mm,
-> 20각형 근사로 −0.025 mm)로 설계 클리어런스 0.20 mm 를 넘깁니다. 충돌 0건입니다.
+> 스태빌 타원 홀 20개 중 가장 가까운 구리가 **0.320 mm**(다이오드 애노드 패드 ↔ 3.0×4.0 홀),
+> 컷아웃 10개는 가장 가까운 구리에서 **1.815 mm(좌) / 2.151 mm(우)** 로, 요구치 0.30 mm 를
+> 모두 넘깁니다. 충돌 0건입니다.
 
 > KiCad DRC가 아니라 자체 기하 검증입니다. 계산 근거는 `scripts/verify_pcb.py`에 그대로 들어 있습니다.
 > KiCad에서 열어 `Inspect → Design Rules Checker`를 한 번 더 돌리는 것을 권장합니다.
@@ -216,26 +228,27 @@ checking choc-split-60-right.kicad_pcb
 | # | 수량 | 부품 | 비고 |
 |---|---|---|---|
 | 1 | 2 | RP2040 Pro Micro (Elite‑Pi 등) | 24핀 2.54 mm, **핀 소켓** 사용 권장 |
-| 2 | 71 | Kailh Choc v1 (CPG1350) 스위치 | 로우프로파일 |
-| 3 | 71 | Choc 핫스왑 소켓 | PCB 뒷면 |
+| 2 | 71 | Kailh Choc **v2 (CPG1353)** 스위치 | 로우프로파일, MX 호환 스템. **Choc v1 스위치는 사용 불가** |
+| 3 | 71 | Choc 핫스왑 소켓 (CPG135001S30) | PCB 뒷면, v1/v2 공용 소켓 |
 | 4 | 72 | 1N4148W (SOD‑123) | 캐소드(띠) 방향 주의 (D_ENC 포함) |
 | 5 | 1 | Alps EC11 / Bourns PEC11R 인코더 (푸시 포함) | 6 mm 축, 너트/와셔 포함품 |
 | 6 | 1 | 6 mm D컷 노브 | 인코더 축용 |
 | 7 | 2 | TRRS 잭 PJ‑320A | 3.5 mm 4극 |
 | 8 | 2 | 6×6×5 mm 택트 스위치 | 리셋 |
 | 9 | 12 | M2 나사/너트 | 홀 2.2 mm, 보드당 6개 |
-| 10 | 71 | Choc 키캡 | 1u 58 / 1.25u 5 / 1.5u 2 / 1.75u 1 / 2u 2 / 2.25u 3 |
-| 11 | 5 | 체리 MX **PCB 마운트** 스태빌라이저 2u | 좌 `LShift`·`Space` / 우 `BSpc`·`Enter`·`Space` — PCB 홀 20개 사용 (플레이트 마운트도 그대로 가능) |
+| 10 | 71 | **MX 호환** 로우프로파일 키캡 | 1u 58 / 1.25u 5 / 1.5u 2 / 1.75u 1 / 2u 2 / 2.25u 3 — Choc v1 전용(두 갈래 스템) 키캡은 **장착 불가**, MX 십자 스템용 |
+| 11 | 5 | **Choc v2 전용 PCB 마운트 스태빌라이저 2u** (스크류 타입) | 좌 `LShift`·`Space` / 우 `BSpc`·`Enter`·`Space` — Keeb‑On!/Salicylic‑acid3 판매품. **체리 MX 스태빌과 호환 안 됨**, Gateron LP v3에도 사용 가능 |
 | 12 | 2 | PCB (2층, 1.6 mm) | 좌 176×130 / 우 181×130 mm |
 
 배선 통계(검증 스크립트 기준)
 
 | | 좌 | 우 |
 |---|---|---|
-| 트랙 | 241 세그먼트 | 295 세그먼트 |
-| 비아 (0.6/0.3 mm) | 39 | 56 |
+| 트랙 | 251 세그먼트 | 271 세그먼트 |
+| 비아 (0.6/0.3 mm) | 43 | 51 |
 | 네트 | 55 | 58 |
-| 스태빌 홀 | 8 (2키) | 12 (3키) |
+| 스태빌 타원 홀 | 8 (2키) | 12 (3키) |
+| 스태빌 컷아웃 | 4 | 6 |
 
 기계 파일(`BOM.csv`)도 함께 들어 있습니다.
 
@@ -272,14 +285,21 @@ checking choc-split-60-right.kicad_pcb
    > 사용하는 인코더가 PEC11R 계열이 아니면 **핀 피치(2.5 mm)와 마운트 포스트 지름(2.1 mm)** 을
    > 데이터시트로 한 번 확인하세요. 풋프린트는 `libs/choc60.pretty/RotaryEncoder_EC11.kicad_mod`.
 5. 스위치를 핫스왑 소켓에 꽂고, 보강판(플레이트)과 케이스를 조립합니다.
-   2u/2.25u 키(`LShift`·`Space`·`BSpc`·`Enter`)에는 **체리 MX PCB 마운트 스태빌라이저**를
-   꽂습니다 — 4 mm(마운트) 다리는 키 **앞쪽**(사용자 쪽), 3 mm(위치결정) 다리는 뒤쪽 홀로
-   들어갑니다. 플레이트 마운트 스태빌을 쓰더라도 PCB 홀은 남아 있어 간섭하지 않습니다.
+   2u/2.25u 키(`LShift`·`Space`·`BSpc`·`Enter`)에는 **Choc v2 전용 PCB 마운트 스태빌라이저**를
+   꽂습니다 — 타원 홀 4개 중 4 mm(스크류) 다리는 키 **앞쪽**(사용자 쪽), 3.4 mm(클립) 다리는
+   뒤쪽 홀로 들어가고, 하우징은 양옆 **컷아웃**으로 빠집니다. 스태빌 와이어가 키 **앞쪽**에 오도록
+   넣으세요. 이 키들의 스위치는 90도 돌아가 있으니(키캡 스템은 십자라 방향 무관) 소켓에 그대로
+   꽂으면 됩니다.
+   > **주의**: ① 체리 MX용 스태빌은 규격이 달라 **들어가지 않습니다**. ② Choc v1 스위치도
+   > **들어가지 않습니다**(중심 홀·가이드 포스트가 다름). ③ 스태빌 하우징이 PCB 아래로 빠지므로
+   > **1.6 mm 기판 기준**입니다(1.2 mm는 심 필요).
 6. TRRS 케이블로 좌우를 연결하고, USB를 **좌측**에 연결합니다.
 
-> **보강판/케이스**: 본 리포에는 케이스·보강판 도면이 없습니다. Choc 표준 컷아웃
+> **보강판/케이스**: 본 리포에는 케이스·보강판 도면이 없습니다. Choc v2 표준 컷아웃
 > (14×14 mm 스위치 홀, 19.05 mm 피치, 1.6 mm 판재)으로 별도 제작하면 됩니다.
-> 2u/2.25u 키 자리에는 PCB 마운트 스태빌 하우징이 올라오도록 **2u 스태빌 컷아웃**을 넣어 주세요.
+> 2u/2.25u 키 자리에는 Choc v2 스태빌용 **플레이트 컷아웃**(20.3×23.8 mm, 양옆 라운드 슬롯)을
+> 넣어 주세요 — 같은 저장소의 `Choc_v2_PlateMountStab_2u` 풋프린트를 쓰면 됩니다.
+> 스태빌은 하우징이 PCB를 뚫고 내려가므로 **구조상 플레이트리스도 가능**합니다.
 > 매크로 열은 본열과 0.25u(4.76 mm) 떨어져 있으니 컷아웃 사이에 4.76 mm 리브가 남습니다.
 > 우측 하단 `RCtrl` 과 `←` 사이(0.5u = 9.5 mm), 좌측 하단 `LAlt` 와 `Space` 사이(0.5u)도
 > 빈 PCB이니 그 자리는 리브로 남겨 두세요.
@@ -345,12 +365,13 @@ make choc_split_60:vial
 
 ```
 pcb/      choc-split-60-{left,right}.kicad_{pro,sch,pcb} + fp-lib-table
-libs/     choc60.pretty (Choc 핫스왑, SOD-123, Pro Micro RP2040, TRRS, 택트, EC11, M2,
-          Stabilizer_Cherry_MX_2.00u)
+libs/     choc60.pretty (Choc v2 핫스왑, SOD-123, Pro Micro RP2040, TRRS, 택트, EC11, M2,
+          Stabilizer_Choc_V2_PCBMount_2u)
 scripts/  generate_pcb.py (설계·배선 생성), verify_pcb.py (검증), preview.py,
           gen_firmware.py (info.json/vial.json/LAYOUT 헤더 생성), layout_kle.py (KLE 도면),
           export_libs.py
-docs/     preview-*.png, layout-kle.png, layout-render.png, verification.txt
+docs/     preview-*.png, detail-*.png (스태빌 확대), layout-kle.png, layout-render.png,
+          verification.txt, review/ (동박 면별 리뷰 이미지)
 firmware/ QMK/VIAL 키보드 정의
 BOM.csv, LICENSE
 ```
@@ -372,6 +393,25 @@ python3 scripts/layout_kle.py      # KLE 형식 도면 PNG (layout.py 좌표에�
 ---
 
 ## 10. 변경 이력
+
+**2026-11-25 (6) Choc v2 전환 · Choc v2 PCB 마운트 스태빌**
+* 스위치를 **Kailh Choc v2 (CPG1353)** 로 전환했습니다. 핀·소켓 좌표는 v1과 같아서(Kailh
+  `CPG135301D01`) 소켓 패드·관통 홀은 그대로이고, **중심 홀 Ø5.05**, **v2 가이드 포스트 홀
+  1.8×2.2 mm 슬롯 1개**(-5, +5.15)만 남기고 **v1 가이드 페그 홀(Ø1.9, ±5.5)을 제거**했습니다.
+  → **Choc v1 스위치는 이 기판에 장착할 수 없습니다.**
+* 키캡은 Choc v1 전용(두 갈래)이 아니라 **MX 호환 십자 스템**용이어야 합니다.
+* 스태빌라이저를 **체리 MX PCB 마운트 → Choc v2 전용 PCB 마운트 2u**(Salicylic‑acid3 /
+  Keeb‑On! 스크류 타입)로 교체했습니다. 키마다 **타원 홀 4개**(3.2×3.4 / 3.0×4.0 mm, ±11.9 mm)와
+  하우징이 지나가는 **Edge.Cuts 컷아웃 2개**(6×7.5 mm, x 8.9~14.9 / y ±3.75)를 넣어
+  좌 4 + 우 6 = **홀 20 + 컷아웃 10**입니다.
+* **2u 이상 키 5개의 스위치를 90도 회전**했습니다. 정렬 배치에서는 핫스왑 소켓 패드 2번이 컷아웃
+  모서리와 겹치고(0.9×1.2 mm), 소켓 몸체가 스태빌 하우징 뒤쪽 돌출부와 간섭합니다. 회전하면
+  소켓 패드가 안쪽으로 들어와 컷아웃과 0.2 mm 이상, 홀과 0.32 mm 이상 떨어집니다.
+* 회전 키의 다이오드를 x 6.75 → **7.68 mm** 로 밀고, 스위치→다이오드 스텁을 캐소드 **아래로
+  우회**시켜 애노드에 붙였습니다(캐소드·비아 관통 회피, 클리어런스 0.2 mm 이상).
+* 행 버스는 새 타원 홀(3.0×4.0)에서 45도로 우회하고, 컷아웃 주변은 라우터가 0.5 mm 부풀린
+  금지 구역으로 처리합니다. 자체 검증: 미연결 0, 클리어런스 위반 0, 홀 최소 0.320 mm,
+  컷아웃 최소 1.815 mm(좌)/2.151 mm(우).
 
 **2026-11-24 (5) 2u 백스페이스 복귀 · 0.5u 간격 · 스태빌 홀**
 * `BSpc` 를 **2u 로 되돌렸습니다**. 대신 우측 **숫자열 전체를 1u 왼쪽으로**(시작 `-0.5u`) 옮겨서
@@ -445,7 +485,9 @@ python3 scripts/layout_kle.py      # KLE 형식 도면 PNG (layout.py 좌표에�
 
 ## 11. 크레딧
 
-* Choc v1 / 핫스왑 풋프린트 형상: [keyswitch-kicad-library](https://github.com/perigoso/keyswitch-kicad-library) (CC‑BY‑SA‑4.0)
+* Choc v1/v2 공용 핫스왑 소켓 풋프린트 형상: [keyswitch-kicad-library](https://github.com/perigoso/keyswitch-kicad-library) (CC‑BY‑SA‑4.0)
+* Choc v2 스위치 홀 규격: Kailh `CPG135301D01` 도면 (중심 Ø5.00, 핀 2개 동일, 가이드 포스트 Ø1.60 1개)
+* Choc v2 PCB 마운트 스태빌 풋프린트: [Salicylic-acid3/KiCAD_FootPrint](https://github.com/Salicylic-acid3/KiCAD_FootPrint) `kbd_Stabilizer.pretty/Choc_v2_PCBMountStab_2u.kicad_mod` (사용 안내: https://salicylic-acid3.hatenablog.com/entry/chocv2-stab-guide)
 * TRRS PJ‑320A 풋프린트: [Keebio‑Parts](https://github.com/keebio/Keebio-Parts.pretty)
 * EC11 인코더 패드 좌표: Bourns PEC11R 데이터시트 (A–C–B 2.5 mm 피치, 마운트 2.1 mm)
 * QMK / VIAL 펌웨어
