@@ -8,15 +8,37 @@ from .geom import U, ROW0_Y, ROW_PITCH, place
 from .layout import CONFIG, keys, stab_holes, stab_cutouts, STAB_MIN_U
 
 # --- matrix truss geometry (all values relative to a key centre) -----------
+# Two diode placements are used.  A plain key keeps its diode just below the
+# switch, cathode towards the middle of the board; the wide (2 u and up) keys
+# and the encoder have their switch/socket turned or shifted far enough right
+# that the same spot would touch, so their diodes sit mirrored (cathode right)
+# and a little higher, in the strip between the stabilizer cutout and the
+# 3.0 x 4.0 mm screw hole.
+#
+# Both placements are chosen so that the diode clears the hot swap socket of
+# the key in the row below by more than 4 mm (it was 2.05 mm at the old
+# cy + 9.0 / cy + 9.0 spot, which is where the socket body and the diode body
+# of a SOD-123 would be close enough to fight during assembly).
 DIODE_DX = 6.75          # diode centre offset from the switch centre
-DIODE_DX_STAB = 7.68     # ... for the 90 degree turned stabilizer keys, where
-                         # switch pad 2 sits at +3.8 / +8.5 and would otherwise
-                         # touch the diode cathode pad
-DIODE_DY = 9.0           # diode centre below the switch centre
+DIODE_DX_STAB = 8.04     # ... for the mirrored (turned/encoder) placement: the
+                         # turned socket's 3.05 mm leg hole ends at +5.34, so
+                         # the anode pad starts at +5.64 and the cathode pad
+                         # ends at +10.45, just short of the +10.4 screw hole
+                         # (the two are 0.49 mm apart in y, 0.31 mm in x)
+DIODE_DY = 6.5           # diode centre below the switch centre
+DIODE_DY_STAB = 5.0      # ... for the mirrored placement: centred between the
+                         # stabilizer cutout (y +3.75) and the screw hole
+                         # (y +6.24), 0.5 mm of copper to each
 STUB_DX = 8.5            # switch pad 2 -> diode anode vertical stub
-VIA_DX = -1.75           # cathode via offset from the diode centre
-BRANCH_DY = -8.35        # column branch line, above the switch centre
-TRUNK_DX = -7.5          # column trunk, left of the row-0 key centre
+VIA_OFF = 1.75           # cathode via, 1.75 mm out from the diode centre =
+                         # straight below the cathode pad; the pad is 1.3 x 1.5
+                         # and 0.75 mm half height, so the 0.6 mm via sits
+                         # 0.45 mm clear of the pad instead of inside it
+BUS_DY = 10.69           # row bus, below the key centre: the straight line
+                         # that runs between the front stabilizer holes of this
+                         # row (bottom edge +10.24) and the clip holes of the
+                         # row below (top edge +11.15), 0.325 mm of copper to
+                         # either, so no bus has to detour around a hole at all
 SIG_W = 0.25
 PWR_W = 0.5
 VIA_D = 0.6
@@ -53,40 +75,10 @@ class Via:
         self.x, self.y, self.net, self.dia, self.drill = x, y, net, dia, drill
 
 
-# A stabilizer hole is a keepout: the row bus steps this far around it (edge of
-# the hole to the centre line of the track, so 0.375 mm of copper clearance for
-# a 0.25 mm track and still 0.25 mm more than the 0.2 mm design clearance).
-BUS_HOLE_CLEAR = 0.5
-
-
-def bus_points(xs, y, holes, margin=BUS_HOLE_CLEAR):
-    """Polyline that links the cathode vias of one matrix row on F.Cu.
-
-    The bus runs straight at ``y`` except where a stabilizer hole of a wide key
-    sits on that line.  There it detours *above* the hole: the strip between the
-    switch body and the hole (y from about cy + 4 to cy + 6) is empty on F.Cu,
-    while below the hole the next row's stabilizer holes and switch pads begin.
-    The legs are 45 degrees when there is room, a square jog when there is not.
-    """
-    blocks = []
-    for h in holes:
-        r = h["d"] / 2.0 + margin
-        L, R = h["x"] - r, h["x"] + r
-        T, B = h["y"] - r, h["y"] + r
-        if T < y < B and L < xs[-1] and R > xs[0]:
-            blocks.append((L, R, T))
-    blocks.sort()
-    pts = [(xs[0], y)]
-    cur = xs[0]
-    for L, R, T in blocks:
-        d = y - T
-        if d > 0 and L - d > cur + 1e-9:
-            pts += [(L, y), (L - d, T), (R + d, T), (R, y)]
-        else:
-            pts += [(L, y), (L, T), (R, T), (R, y)]
-        cur = R
-    pts.append((xs[-1], y))
-    return pts
+# The row bus is one straight horizontal segment: BUS_DY was picked so that the
+# line fits between the stabilizer holes of two neighbouring rows without a
+# single jog (see BUS_DY above).  Nothing may be placed inside the band the bus
+# needs; verify_pcb.py checks the copper to hole distance on both sides.
 
 
 class Board:
@@ -173,10 +165,16 @@ class Board:
                     k["stab"] = self.add("stab", "ST%d" % self._n_stab,
                                          "Choc v2 stab 2u",
                                          k["cx"], k["cy"], 0.0, "F")
-            ddx = DIODE_DX_STAB if k.get("sw_ang", 0.0) else DIODE_DX
+            mirror = bool(k.get("sw_ang", 0.0)) or k["kind"] == "encoder"
+            k["diode_mirror"] = mirror
+            ddx = DIODE_DX_STAB if mirror else DIODE_DX
+            ddy = DIODE_DY_STAB if mirror else DIODE_DY
+            # kbar_right flips the pads inside the footprint; the footprint sits
+            # on the back side, where KiCad mirrors local x, so kbar_right=True
+            # gives cathode-left and False gives cathode-right on the board
             k["diode"] = self.add("diode", k["dref"], "1N4148W",
-                                  k["cx"] + ddx, k["cy"] + DIODE_DY,
-                                  0.0, "B", kbar_right=True)
+                                  k["cx"] + ddx, k["cy"] + ddy,
+                                  0.0, "B", kbar_right=not mirror)
             k["diode"].pad("1").net = k["row_net"]
             k["diode"].pad("2").net = k["knet"]
 
@@ -231,52 +229,112 @@ class Board:
             self.net(p.net)
 
     # -------------------------------------------------------------- the truss
+    # ------------------------------------------------------------ via placing
+    def _free_for_via(self, x, y, holes=0.35, pads=0.30):
+        """Is a VIA_D via at (x, y) clear of every pad, hole and cutout edge?
+
+        Every pad counts, including the one it belongs to: a via inside a 1.3 x
+        1.5 mm diode pad is exactly what has to be avoided here.
+        """
+        r = VIA_D / 2.0
+        for fp in self.fps:
+            for p in fp.pads:
+                x0, y0 = p.gx - p.w / 2.0, p.gy - p.h / 2.0
+                x1, y1 = p.gx + p.w / 2.0, p.gy + p.h / 2.0
+                dx = max(0.0, max(x0 - x, x - x1))
+                dy = max(0.0, max(y0 - y, y - y1))
+                d = math.hypot(dx, dy) - r
+                if d < (holes if p.is_hole else pads):
+                    return False
+        for c in self.cutouts:
+            dx = max(0.0, max(c["x0"] - x, x - c["x1"]))
+            dy = max(0.0, max(c["y0"] - y, y - c["y1"]))
+            if math.hypot(dx, dy) - r < 0.30:
+                return False
+        return True
+
+    def _cathode_via(self, k, kx, ay, bus_y):
+        """Place the cathode via on the row bus, clear of everything nearby.
+
+        The bus line is the one straight line that fits between the stabilizer
+        holes of two rows, and that corridor is 0.91 mm wide, which is too
+        narrow for a 0.6 mm via wherever a clip hole sits right below the line.
+        So the via is slid along the bus (never off it) until it is clear, and
+        the cathode then comes down and steps into it at 45 degrees.
+        """
+        for off in (0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5, 2.0, -2.0,
+                    2.5, -2.5, 3.0, -3.0):
+            vx = kx + off
+            if self._free_for_via(vx, bus_y):
+                break
+        else:
+            vx = kx
+            self.warnings.append("no clear spot for the %s cathode via" % k["ref"])
+        if abs(vx - kx) < 1e-9:
+            self.add_track((kx, ay), (vx, bus_y), SIG_W, "B.Cu", k["row_net"])
+        else:
+            # vertical drop, then a 45 degree step onto the via
+            kink = bus_y - abs(vx - kx)
+            kink = max(kink, ay + 0.5)
+            self.add_track((kx, ay), (kx, kink), SIG_W, "B.Cu", k["row_net"])
+            self.add_track((kx, kink), (vx, bus_y), SIG_W, "B.Cu", k["row_net"])
+        self.add_via(vx, bus_y, k["row_net"])
+        return vx, bus_y
+
     def build_truss(self):
         """Place the diode of every key and the horizontal row buses.
 
         Every key gets a short back-layer stub from switch pad 2 to the diode
-        anode, and the diode cathode drops a via onto the row bus.  The buses
-        are horizontal lines on F.Cu (rows), the column nets are routed
-        vertically on B.Cu afterwards.
+        anode, and the diode cathode drops to a via on the row bus, which is
+        one straight horizontal line per row on F.Cu.  The column nets are
+        routed vertically on B.Cu afterwards.
+
+        The via of every diode is placed on the bus, straight below the cathode
+        pad and 0.45 mm outside it, so that no via sits on a pad (via in pad
+        makes the solder wick through the hole and the pad tear off).
         """
         for k in self.keys:
             cx, cy = k["cx"], k["cy"]
+            mirror = k["diode_mirror"]
+            ddy = DIODE_DY_STAB if mirror else DIODE_DY
+            # x of the cathode / anode pad centres on the board.  A back side
+            # footprint is mirrored in x, so the pads swap sides on the board
+            if mirror:      # kbar_right False: K at local -1.75 -> board +1.75
+                kx = cx + DIODE_DX_STAB + 1.75
+                ax = cx + DIODE_DX_STAB - 1.75
+            else:           # kbar_right True: K at local +1.75 -> board -1.75
+                kx = cx + DIODE_DX - 1.75
+                ax = cx + DIODE_DX + 1.75
+            ay = cy + ddy
             if k["kind"] == "encoder":
-                # the switch terminals point down; hook S2 to the diode anode
-                # with a short 90 degree jog that stays clear of the cathode pad
-                yk = cy + 7.0
-                self.add_track((cx + 2.5, yk), (cx + 8.5, yk), SIG_W, "B.Cu", k["knet"])
-                self.add_track((cx + 8.5, yk), (cx + 8.5, cy + DIODE_DY), SIG_W, "B.Cu", k["knet"])
-            elif k.get("sw_ang", 0.0) == 0.0:
+                # the switch terminals point down; S2 (x +2.5, y +7.0) goes
+                # right and up into the anode pad, which sits at +5.93 for the
+                # mirrored diode
+                self.add_track((cx + 2.5, cy + 7.0), (ax, cy + 7.0),
+                               SIG_W, "B.Cu", k["knet"])
+                self.add_track((ax, cy + 7.0), (ax, ay), SIG_W, "B.Cu", k["knet"])
+            elif not mirror:
+                # plain key: switch pad 2 (x +8.5, y -3.8) drops straight down
+                # into the anode pad
                 self.add_track((cx + STUB_DX, cy - 3.8),
-                               (cx + STUB_DX, cy + DIODE_DY), SIG_W, "B.Cu", k["knet"])
+                               (cx + STUB_DX, ay), SIG_W, "B.Cu", k["knet"])
             else:
-                # 90 degree turned switch of a stabilizer key: pad 2 sits at
-                # (cx + 3.8, cy + 8.5).  The diode cathode (row net) is in the
-                # straight line, so the stub drops below it and comes up into
-                # the anode pad from underneath.
-                self.add_track((cx + 3.8, cy + 8.5), (cx + 3.8, cy + 10.35),
+                # turned switch of a stabilizer key: pad 2 sits at
+                # (cx + 3.8, cy + 8.5), the anode pad at (cx + 5.93, cy + 5.0),
+                # so the stub steps right once and comes up into the pad
+                self.add_track((cx + 3.8, cy + 8.5), (ax, cy + 8.5),
                                SIG_W, "B.Cu", k["knet"])
-                ax = cx + DIODE_DX_STAB + 1.75
-                self.add_track((cx + 3.8, cy + 10.35), (ax, cy + 10.35),
-                               SIG_W, "B.Cu", k["knet"])
-                self.add_track((ax, cy + 10.35), (ax, cy + DIODE_DY),
-                               SIG_W, "B.Cu", k["knet"])
-            ddx = DIODE_DX_STAB if k.get("sw_ang", 0.0) else DIODE_DX
-            vx, vy = cx + ddx + VIA_DX, cy + DIODE_DY
-            self.add_via(vx, vy, k["row_net"])
+                self.add_track((ax, cy + 8.5), (ax, ay), SIG_W, "B.Cu", k["knet"])
+            vx, vy = self._cathode_via(k, kx, ay, cy + BUS_DY)
+            k["via_x"] = vx
         rows = {}
         for k in self.keys:
             rows.setdefault(k["row"], []).append(k)
         self.row_bus = {}
-        holes = stab_holes(self.hand)
         for r, ks in sorted(rows.items()):
-            ys = ks[0]["cy"] + DIODE_DY
-            xs = sorted(k["cx"] + (DIODE_DX_STAB if k.get("sw_ang", 0.0) else DIODE_DX)
-                        + VIA_DX for k in ks)
-            pts = bus_points(xs, ys, holes)
-            for a, b in zip(pts, pts[1:]):
-                self.add_track(a, b, SIG_W, "F.Cu", "ROW%d" % r)
+            ys = ks[0]["cy"] + BUS_DY
+            xs = sorted(k["via_x"] for k in ks)
+            self.add_track((xs[0], ys), (xs[-1], ys), SIG_W, "F.Cu", "ROW%d" % r)
             self.row_bus[r] = (min(xs), max(xs), ys)
         self.col_keys = {}
         for k in self.keys:

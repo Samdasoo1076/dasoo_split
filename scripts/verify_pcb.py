@@ -14,6 +14,9 @@ checks, for each half:
   7. every switch of 2 u and wider carries the Kailh Choc v2 PCB mount
      stabilizer (4 oval clip holes of the 2.00 u pattern plus the two Edge.Cuts
      cutouts) and no copper comes near the holes or the cutouts
+  8. no via sits on a pad (via in pad): every via is 0.30 mm or more from the
+     copper edge of every pad and from every drilled hole
+  9. every diode clears the hot swap socket of the key below by 3 mm or more
 
 Usage:  python3 scripts/verify_pcb.py [pcb/*.kicad_pcb ...]
 """
@@ -26,6 +29,8 @@ from collections import defaultdict
 CLEAR = 0.20          # copper to copper clearance (mm)
 EDGE_CLEAR = 0.30     # copper to board edge
 HOLE_CLEAR = 0.30     # copper to NPTH hole / board cutout edge
+VIA_PAD_CLEAR = 0.30  # via to any pad copper: a via may not sit on a pad
+DIODE_SOCKET_CLEAR = 3.00   # diode to the socket of the key in the row below
 MIN_W = 0.25          # thinnest track we accept
 TOL = 1e-6
 
@@ -772,6 +777,80 @@ def check_cutouts(b, outline):
     return errs, (len(cos), dmin)
 
 
+def check_via_pad(b):
+    """No via in pad: every via is clear of every pad and drilled hole.
+
+    A via inside a pad lets the solder wick down the barrel during reflow and
+    the hole can tear the pad off when the board flexes or a hot swap socket is
+    pulled, so each via of this board has to sit outside the pad copper.  The
+    check looks at all pads of both layers, the via's own net included; the
+    return value carries the closest pair for the report.
+    """
+    errs = []
+    pads = [p for p in b.pads if p.shape != "hole"]
+    holes = [p for p in b.pads if p.shape == "hole"]
+    worst = (9.9, None, None)
+    for v in b.vias:
+        best = (9.9, None)
+        for p in pads:
+            if not set(v.layers) & set(p.layers):
+                continue
+            d = item_dist(v, p, None)
+            if d < best[0]:
+                best = (d, p)
+        for h in holes:
+            d = item_dist(v, h, None)
+            if d < best[0]:
+                best = (d, h)
+        if best[0] < worst[0]:
+            worst = (best[0], v, best[1])
+        if best[1] is not None and best[0] < VIA_PAD_CLEAR - 0.001:
+            errs.append("via at (%.2f, %.2f) only %.3f mm from %s %s (%s)"
+                        % (v.x, v.y, best[0],
+                           "hole" if best[1].shape == "hole" else "pad",
+                           best[1].num or "-", best[1].ref))
+    return errs, worst
+
+
+def check_diode_socket(b):
+    """Every diode is well clear of the hot swap socket of the key below.
+
+    Both the diode (SOD-123, 2.6 x 1.6 mm body) and the socket sit on the back
+    side, so the distance between the diode pads and the socket pads of any
+    *other* key is the assembly margin: it used to be 2.05 mm, which leaves no
+    room for the socket body and the diode body next to each other.
+    """
+    errs = []
+    diodes = defaultdict(list)
+    sockets = defaultdict(list)
+    for p in b.pads:
+        if p.shape == "hole" or not p.ref:
+            continue
+        if p.fp and "D_SOD-123" in p.fp:
+            diodes[p.ref].append(p)
+        elif p.fp and "Choc_V2" in p.fp and p.num in ("1", "2"):
+            sockets[p.ref].append(p)
+    worst = (9.9, None, None)
+    for dref, dpads in sorted(diodes.items()):
+        best = (9.9, None)
+        for sref, spads in sockets.items():
+            if dref[1:] == sref[2:]:        # its own key, connected on purpose
+                continue
+            for d in dpads:
+                for s in spads:
+                    val = poly_dist(d.poly, s.poly)
+                    if val < best[0]:
+                        best = (val, sref)
+        if best[1] is None:
+            continue
+        if best[0] < worst[0]:
+            worst = (best[0], dref, best[1])
+        if best[0] < DIODE_SOCKET_CLEAR - 0.001:
+            errs.append("diode %s only %.3f mm from socket pad of %s"
+                        % (dref, best[0], best[1]))
+    return errs, worst
+
+
 def check_zones(b):
     errs = []
     zl = [(l, n) for (l, n, pts) in b.zones if n == "GND"]
@@ -814,6 +893,10 @@ def main(argv):
         errs += stab_errs
         cut_errs, (n_cut, cut_min) = check_cutouts(b, outline)
         errs += cut_errs
+        via_errs, (via_d, via_it, via_near) = check_via_pad(b)
+        errs += via_errs
+        dio_errs, (dio_d, dio_ref, dio_sock) = check_diode_socket(b)
+        errs += dio_errs
         n_pads = len([p for p in b.pads if p.shape != "hole"])
         print("  pads=%d tracks=%d vias=%d nets=%d" %
               (n_pads, len(b.tracks), len(b.vias), len(b.nets)))
@@ -835,6 +918,14 @@ def main(argv):
                 print("   ... %d more" % (len(errs) - 40))
         else:
             print("  OK: all checks passed")
+        if via_near is not None:
+            print("  via in pad: %d vias, nearest pad/hole %.3f mm (via at %.2f, %.2f, %s %s)"
+                  % (len(b.vias), via_d, via_it.x, via_it.y,
+                     "hole" if via_near.shape == "hole" else "pad",
+                     via_near.ref))
+        if dio_sock is not None:
+            print("  diode to next row socket: nearest %.3f mm (%s to %s)"
+                  % (dio_d, dio_ref, dio_sock))
     return rc
 
 
