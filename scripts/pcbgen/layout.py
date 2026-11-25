@@ -129,9 +129,18 @@ CONFIG = {
     "left": dict(
         outline=(-26.0, -27.0, 150.0, 103.0),
         mcu=dict(px=7.0, py=-11.0, mirror=False),
-        trrs=dict(px=147.0, py=-11.0, ang=-90.0),
+        # USB-C link port on the inner end of the top edge (cable from above).
+        # The HRO TYPE-C-31-M-12 has its mouth on the +Y side of the footprint
+        # (the 16 pins are at the back, -Y), so the part is placed 180 degrees
+        # turned: the mouth faces the top board edge.  The recommended layout
+        # puts the board edge 5.79 mm in front of the locating-peg line
+        # (local y -2.60), i.e. local y +3.19, so the 8.94 x 7.30 mm body
+        # overhangs the edge by 0.46 mm and the pad row sits 7.2 mm inside it.
+        usbc=dict(px=143.6, py=-23.81, ang=180.0),
         reset=dict(px=95.0, py=-12.0, ang=0.0),
-        mounts=[(30.0, -23.5), (146.0, -23.5), (-22.0, 99.5), (66.0, 99.5),
+        # the old top right mount hole sat exactly under the link port; it
+        # moved 16 mm inboard, out of the connector and its fan-out
+        mounts=[(30.0, -23.5), (130.0, -23.5), (-22.0, 99.5), (66.0, 99.5),
                 (146.0, 99.5), (146.0, 55.0)],
     ),
     "right": dict(
@@ -142,10 +151,10 @@ CONFIG = {
         # the bottom band, clear of the Right key's diode.
         outline=(-14.75, -27.0, 166.25, 103.0),
         mcu=dict(px=148.0, py=-11.0, mirror=True),
-        trrs=dict(px=-7.0, py=-11.0, ang=90.0),
+        usbc=dict(px=-8.9, py=-23.81, ang=180.0),
         reset=dict(px=120.0, py=-12.0, ang=0.0),
         mounts=[(-6.5, 99.5), (55.0, 99.5), (130.0, 99.5), (160.0, 99.5),
-                (-6.0, -23.5), (100.0, -23.5)],
+                (6.0, -23.5), (100.0, -23.5)],
     ),
 }
 

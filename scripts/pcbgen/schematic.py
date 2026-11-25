@@ -80,39 +80,44 @@ LIB_D = '''    (symbol "choc60:D" (pin_numbers hide) (pin_names (offset 1.016) h
       )
     )'''
 
-LIB_TRRS = '''    (symbol "choc60:TRRS" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
-      (property "Reference" "J" (at 0 8.89 0)
+LIB_USBC = '''    (symbol "choc60:USB_C_16P" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
+      (property "Reference" "J" (at 0 25.4 0)
         (effects (font (size 1.27 1.27))))
-      (property "Value" "PJ-320A" (at 0 -8.89 0)
+      (property "Value" "USB-C 16P link" (at 0 -9.0 0)
         (effects (font (size 1.27 1.27))))
       (property "Footprint" "" (at 0 0 0)
         (effects (font (size 1.27 1.27)) hide))
       (property "Datasheet" "" (at 0 0 0)
         (effects (font (size 1.27 1.27)) hide))
-      (symbol "TRRS_0_1"
-        (rectangle (start -5.08 6.35) (end 5.08 -6.35)
+      (symbol "USB_C_16P_0_1"
+        (rectangle (start -10.16 22.86) (end 10.16 -7.62)
           (stroke (width 0.254) (type default)) (fill (type background)))
-        (circle (center -3.81 2.54) (radius 0.508)
+        (polyline (pts (xy -4.0 19.0) (xy -2.5 20.5) (xy 4.0 20.5))
           (stroke (width 0.1524) (type default)) (fill (type none)))
-        (circle (center -3.81 0.635) (radius 0.508)
-          (stroke (width 0.1524) (type default)) (fill (type none)))
-        (circle (center -3.81 -1.905) (radius 0.508)
+        (polyline (pts (xy -2.5 20.5) (xy 1.0 17.0) (xy 1.0 21.5) (xy 1.6 21.0))
           (stroke (width 0.1524) (type default)) (fill (type none)))
       )
-      (symbol "TRRS_1_1"
-        (pin passive line (at 7.62 3.81 180) (length 2.54)
-          (name "SLEEVE" (effects (font (size 1.27 1.27))))
-          (number "1" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 7.62 1.27 180) (length 2.54)
-          (name "TIP" (effects (font (size 1.27 1.27))))
-          (number "2" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 7.62 -1.27 180) (length 2.54)
-          (name "RING1" (effects (font (size 1.27 1.27))))
-          (number "3" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 7.62 -3.81 180) (length 2.54)
-          (name "RING2" (effects (font (size 1.27 1.27))))
-          (number "4" (effects (font (size 1.27 1.27)))))
-      )
+      (symbol "USB_C_16P_1_1"
+''' + "".join(
+    '        (pin passive line (at -12.7 %s 0) (length 2.54)\n'
+    '          (name "%s" (effects (font (size 1.016 1.016))))\n'
+    '          (number "%s" (effects (font (size 1.016 1.016)))))\n'
+    % (num(y), name, num_)
+    for num_, name, y in (("A4", "VBUS", 20.32), ("A9", "VBUS", 17.78),
+                          ("B4", "VBUS", 15.24), ("B9", "VBUS", 12.70),
+                          ("A1", "GND", 7.62), ("A12", "GND", 5.08),
+                          ("B1", "GND", 2.54), ("B12", "GND", 0.0),
+                          ("S1", "SHIELD", -5.08))
+) + "".join(
+    '        (pin passive line (at 12.7 %s 180) (length 2.54)\n'
+    '          (name "%s" (effects (font (size 1.016 1.016))))\n'
+    '          (number "%s" (effects (font (size 1.016 1.016)))))\n'
+    % (num(y), name, num_)
+    for num_, name, y in (("A6", "D+", 20.32), ("B6", "D+", 17.78),
+                          ("A7", "D-", 15.24), ("B7", "D-", 12.70),
+                          ("A5", "CC1", 7.62), ("B5", "CC2", 5.08),
+                          ("A8", "SBU1", 2.54), ("B8", "SBU2", 0.0))
+) + '''      )
     )'''
 
 LIB_ENC = '''    (symbol "choc60:RotaryEncoder_SW" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
@@ -253,7 +258,7 @@ def write_schematic(board, path, project=None, root=None):
     o.append(LIB_SW)
     o.append(LIB_D)
     o.append(lib_mcu())
-    o.append(LIB_TRRS)
+    o.append(LIB_USBC)
     o.append(LIB_ENC)
     o.append('  )')
     body = []
@@ -303,19 +308,29 @@ def write_schematic(board, path, project=None, root=None):
         else:
             body.append(wire((px_, y), (mx + 17.78, y)))
             body.append(label(net, mx + 17.78, y, 0, "left"))
-    # trrs
+    # USB-C link port: cable between the halves only ("LINK ONLY" on the silk).
+    # The UART pair is crossed between the halves; the cable is straight.
     jx, jy = 345.0, 200.0
-    body.append(sym("choc60:TRRS", "J1", "PJ-320A", jx, jy, ["1", "2", "3", "4"], project, root,
-                    footprint="choc60:TRRS_PJ-320A",
-                    ref_at=(jx, jy - 9.6), val_at=(jx, jy + 9.6)))
-    trrs = {"SLEEVE": "RX" if board.hand == "left" else "TX",
-            "TIP": "VCC",
-            "RING1": "GND",
-            "RING2": "TX" if board.hand == "left" else "RX"}
-    for pnum, pname, yy in (("1", "SLEEVE", 3.81), ("2", "TIP", 1.27),
-                            ("3", "RING1", -1.27), ("4", "RING2", -3.81)):
-        body.append(wire((jx + 7.62, jy - yy), (jx + 12.7, jy - yy)))
-        body.append(label(trrs[pname], jx + 12.7, jy - yy, 0, "left"))
+    body.append(sym("choc60:USB_C_16P", "J1", "USB-C 16P link", jx, jy,
+                    ["A1", "A4", "A5", "A6", "A7", "A8", "A9", "A12",
+                     "B1", "B4", "B5", "B6", "B7", "B8", "B9", "B12", "S1"],
+                    project, root,
+                    footprint="choc60:USB_C_Receptacle_HRO_TYPE-C-31-M-12",
+                    ref_at=(jx, jy - 25.6), val_at=(jx, jy + 9.9)))
+    for pnum, net, yy in (("A4", "VCC", 20.32), ("A9", "VCC", 17.78),
+                          ("B4", "VCC", 15.24), ("B9", "VCC", 12.70),
+                          ("A1", "GND", 7.62), ("A12", "GND", 5.08),
+                          ("B1", "GND", 2.54), ("B12", "GND", 0.0),
+                          ("S1", "GND", -5.08)):
+        body.append(wire((jx - 12.7, jy - yy), (jx - 17.78, jy - yy)))
+        body.append(label(net, jx - 17.78, jy - yy, 0, "right"))
+    for pnum, net, yy in (("A6", board.dplus, 20.32), ("B6", board.dplus, 17.78),
+                          ("A7", board.dminus, 15.24), ("B7", board.dminus, 12.70)):
+        body.append(wire((jx + 12.7, jy - yy), (jx + 17.78, jy - yy)))
+        body.append(label(net, jx + 17.78, jy - yy, 0, "left"))
+    for pnum, yy in (("A5", 7.62), ("B5", 5.08), ("A8", 2.54), ("B8", 0.0)):
+        body.append('  (no_connect (at %s %s) (uuid "%s"))'
+                    % (num(jx + 12.7), num(jy - yy), u()))
     # reset switch
     rx, ry = 300.0, 228.0
     body.append(sym("choc60:SW_Push", "SW_RST", "Reset", rx, ry, ["1", "2"], project, root,
@@ -351,7 +366,9 @@ def write_schematic(board, path, project=None, root=None):
     body.append(text("KEY MATRIX  -  %d rows x %d columns, one switch + one 1N4148W per key,"
                      " COL2ROW" % (nrow, ncol), 26.0, 22.0, 1.8))
     body.append(text("CONTROLLER", mx, my - 26.0, 1.8))
-    body.append(text("TRRS LINK", jx, 187.0, 1.8))
+    body.append(text("USB-C LINK (cable between halves only)", jx - 20.0, 168.0, 1.8))
+    body.append(text("CC1 / CC2 / SBU not connected - no 5.1k CC pull-downs,", jx - 20.0, 214.0, 1.4))
+    body.append(text("so a C-to-C host link does not feed VBUS into the board", jx - 20.0, 218.0, 1.4))
     body.append(text("RESET", rx, 219.0, 1.8))
     if any(k["kind"] == "encoder" for k in board.keys):
         # the encoder's own matrix cell stays empty in the grid: say so, or the

@@ -2,7 +2,8 @@
 
 로우스태거(row‑staggered) 배열을 좌우로 나눈 **스플릿 키보드**입니다.
 Kailh **Choc v2(CPG1353) 로우프로파일 핫스왑** 스위치 **71개 + 로터리 인코더 1개 = 72키 포지션**
-(좌 34 / 우 38), 좌우 각각 **RP2040 Pro Micro**, TRRS 4극 케이블 통신, `COL2ROW` 매트릭스를 씁니다.
+(좌 34 / 우 38), 좌우 각각 **RP2040 Pro Micro**, 안쪽 상단의 **USB-C 링크 포트**로 좌우를 잇고,
+`COL2ROW` 매트릭스를 씁니다.
 모든 PCB 배선은 자동 라우터 없이 좌표를 계산해 직접 배선했고, `scripts/verify_pcb.py`로 전수 검증합니다.
 
 ![layout render](docs/layout-render.png)
@@ -20,12 +21,12 @@ Kailh **Choc v2(CPG1353) 로우프로파일 핫스왑** 스위치 **71개 + 로�
 
 ![schematic left](docs/review/sch-left.png)
 
-*(좌 하프 회로도 — 스위치 33 + 다이오드 33, 컨트롤러 U1, TRRS J1, 리셋, EC11 인코더 RE1과 그 다이오드.
+*(좌 하프 회로도 — 스위치 33 + 다이오드 33, 컨트롤러 U1, USB-C 링크 J1, 리셋, EC11 인코더 RE1과 그 다이오드.
 각 칸이 매트릭스의 (행, 열) 자리이고, 넷 이름이 그대로 적혀 있습니다)*
 
 ![schematic right](docs/review/sch-right.png)
 
-*(우 하프 회로도 — 스위치 38 + 다이오드 38, 컨트롤러·TRRS·리셋. 아래쪽 두 줄의 `← ↓ →` 가 매트릭스
+*(우 하프 회로도 — 스위치 38 + 다이오드 38, 컨트롤러·USB-C 링크·리셋. 아래쪽 두 줄의 `← ↓ →` 가 매트릭스
 COL6·7·8 에 그대로 놓입니다)*
 
 ---
@@ -46,7 +47,7 @@ COL6·7·8 에 그대로 놓입니다)*
 | 인코더 | Alps EC11 / Bourns PEC11R 호환 5핀 (A·C·B + 푸시 스위치 2핀), 6 mm 축 |
 | 다이오드 | 1N4148W SOD-123 × 72 (스위치 71 + 인코더 푸시 1), `COL2ROW` |
 | MCU | RP2040 Pro Micro (Elite‑Pi / Pro Micro RP2040 호환, 24핀) × 2 |
-| 좌우 연결 | TRRS PJ‑320A × 2, Full‑duplex UART (`VCC/GND/TX/RX`) |
+| 좌우 연결 | **USB-C 16핀 리셉터클 × 2** (HRO TYPE‑C‑31‑M‑12 규격), 각 하프 **안쪽 상단**에서 케이블이 **위로** 꽂힘. Full‑duplex UART (`VBUS=VCC` / `GND` / `D+=TX` / `D-=RX`, 좌우는 서로 교차) — **링크 전용**, PC에 꽂는 포트 아님 |
 | 리셋 | 6×6 택트 스위치 × 2 (RST–GND) |
 | PCB | 2층, 1.6 mm, 좌 176×130 mm / 우 181×130 mm, M2 마운팅 홀 각 6개 |
 | 펌웨어 | QMK + VIAL (RP2040, `MASTER_LEFT`, `ENCODER_MAP_ENABLE`) |
@@ -115,7 +116,7 @@ ANSI 스태거(`T`|`Y`, `G`|`H`, `B`|`N`)를 그대로 가집니다. 다만 **�
 | 1 | GP0 | `TX` | | 13 | RAW | – (미사용) |
 | 2 | GP1 | `RX` | | 14 | GND | `GND` |
 | 3 | GND | `GND` | | 15 | RST | `RST` (리셋 스위치) |
-| 4 | GND | `GND` | | 16 | VCC | `VCC` (TRRS Tip) |
+| 4 | GND | `GND` | | 16 | VCC | `VCC` (USB-C VBUS) |
 | 5 | GP2 | `ROW0` | | 17 | GP29 | `ENC_B` (좌측만) |
 | 6 | GP3 | `ROW1` | | 18 | GP28 | `ENC_A` (좌측만) |
 | 7 | GP4 | `ROW2` | | 19 | GP27 | `COL8` (우측만) |
@@ -149,16 +150,28 @@ ANSI 스태거(`T`|`Y`, `G`|`H`, `B`|`N`)를 그대로 가집니다. 다만 **�
 * `R4` 의 3~5열은 비어 있고, `← ↓ →` 는 각각 `RShift`·`↑`·`Del` 과 같은 열(6·7·8)에 들어갑니다.
 * 인코더 A/B는 매트릭스가 아니라 **GP28 / GP29** 직결이고, 푸시 스위치만 매트릭스 `L07`에 들어갑니다.
 
-### TRRS 배선 (좌우가 서로 반대)
+### USB-C 링크 배선 (좌우가 서로 반대)
 
-| TRRS | 좌측 PCB | 우측 PCB |
+| USB-C 핀 | 좌측 PCB | 우측 PCB |
 |---|---|---|
-| Tip | `VCC` | `VCC` |
-| Ring1 | `GND` | `GND` |
-| Ring2 | `TX` (GP0) | `RX` (GP1) |
-| Sleeve | `RX` (GP1) | `TX` (GP0) |
+| VBUS (A4·B4·A9·B9) | `VCC` | `VCC` |
+| GND (A1·B1·A12·B12) + 쉴드 4핀 | `GND` | `GND` |
+| D+ (A6·B6) | `TX` (GP0) | `RX` (GP1) |
+| D- (A7·B7) | `RX` (GP1) | `TX` (GP0) |
+| CC1·CC2·SBU1·SBU2 (A5·B5·A8·B8) | – (미연결) | – (미연결) |
 
-> 좌측이 항상 마스터입니다(`MASTER_LEFT`). USB‑C 케이블은 **좌측**에 꽂으세요.
+> 케이블은 그대로 지나가므로 UART 한 쌍은 **PCB에서 교차**시킵니다. 좌측이 항상 마스터이고
+> (`MASTER_LEFT`) USB‑C 케이블은 **좌측**에 꽂습니다.
+
+> **링크 전용(LINK ONLY)**: 이 포트는 좌우를 잇는 5V/GND/D+/D- 전용입니다. 보드 실크에도
+> `LINK ONLY` 를 넣었습니다. PC에 꽂으면 5V가 VCC로 역류하고 D+/D-가 PC의 USB 데이터선에 붙습니다.
+
+> **5.1k CC 풀다운은 달지 않았습니다.** ① 이 포트는 장치(PC)와 협상하는 포트가 아니라 두 하프 사이의
+> 직결 링크이고, VBUS는 VCC에 그대로 연결돼 있어 C-to-C 케이블로도 5V가 그대로 전달됩니다.
+> ② CC를 비워 두면 **C-to-C로 PC에 꽂았을 때 PC가 VBUS를 올려 주지 않으므로**(CC 검출 실패) 역급전이
+> 한 겹 막아집니다. ③ 반대로 CC 풀다운을 달면 PC가 이 보드를 장치로 인식해 VBUS를 올리므로 링크
+> 포트에 PC를 꽂았을 때 위험해집니다. ④ A-to-C 케이블은 CC와 무관하게 5V가 나오므로 **절대 금지**입니다.
+> 나중에 이 포트를 진짜 USB 장치 포트로 쓰려면 CC1·CC2에 5.1k를 GND로 달고 펌웨어를 바꿔야 합니다.
 
 ---
 
@@ -173,7 +186,7 @@ ANSI 스태거(`T`|`Y`, `G`|`H`, `B`|`N`)를 그대로 가집니다. 다만 **�
   (우측 `]`·`\`)만 비아를 버스 선 위에서 1.87 mm 옆으로 밀고 캐소드가 45도로 한 번 꺾여 들어가며,
   나머지 69개는 캐소드 패드에서 수직으로 바로 내려옵니다.
 * 스태빌 타원 홀 20개는 **양면 기판 관통 NPTH**로, 라우터가 트랙·비아를 놓을 때 장애물로 계산합니다
-  (스위치 홀·핫스왑 패드·다이오드·마운팅 홀·TRRS/리셋/인코더 패드와 같은 취급).
+  (스위치 홀·핫스왑 패드·다이오드·마운팅 홀·USB-C/리셋/인코더 패드와 같은 취급).
 * 스태빌 **컷아웃 10개(Edge.Cuts 사각 6×7.5 mm)** 는 보드에서 잘려 나가는 영역이라, 라우터가
   트랙·비아를 놓을 때 사각형을 0.5 mm 부풀려 통행 금지 구역으로 잡습니다(실제 구리 이격 0.35 mm 이상).
 * **2u 이상 키의 스위치는 90도 돌려 배치**했습니다. 핫스왑 소켓 패드가 정렬된 채로는 소켓 패드
@@ -191,7 +204,15 @@ ANSI 스태거(`T`|`Y`, `G`|`H`, `B`|`N`)를 그대로 가집니다. 다만 **�
   0.642 mm 입니다.
 * 신호선 **0.25 mm**, 전원(VCC/GND) **0.5 mm**, 비아 **0.6 / 0.3 mm(드릴)**.
 * 동일 층 타 네트 교차 0건, 최소 클리어런스 **0.2 mm**, 보드 외곽 이격 **0.3 mm**.
-* 모든 트랙은 0/45/90도. 스위치 홀·핫스왑 패드·마운팅 홀·TRRS/리셋/인코더 패드를 장애물로 계산해 회피.
+* 모든 트랙은 0/45/90도. 스위치 홀·핫스왑 패드·마운팅 홀·USB-C/리셋/인코더 패드를 장애물로 계산해 회피.
+* **USB-C 링크 포트의 0.5 mm 피치 16핀**은 좌표를 직접 계산해 손으로 빼냈습니다. 패드 사이
+  (0.5 − 0.3 = 0.2 mm)로는 0.25 mm 트랙도 비아도 지나갈 수 없어, 패드마다 **보드 안쪽으로 직선으로**
+  빠져나온 뒤 패드 줄 뒤에서 갈라집니다. D+ (A6/B6)는 A6이 가운데라 이웃 D- 두 줄에 막히므로, B7·A7을 45도로
+  바깥으로 벌린 다음 A6 비아를 그 위에 놓고 **B.Cu로 건너가** B6 비아와 잇습니다(0.6 mm 비아가
+  0.25 mm 트랙 옆에 서려면 0.625 mm가 필요). VBUS 두 패드는 +3.0 mm에서 F.Cu로 합쳐 비아 하나로
+  B.Cu로 내리고, GND는 두 패드와 **쉴드 다리 4개**를 모두 F.Cu로 묶었습니다(쉴드 다리는 패드 줄
+  **앞쪽**, 즉 보드 끝 쪽에 있어 좌우 한 줄씩 세로로 이어 GND 패드에 붙였습니다). 나머지 4핀(CC/SBU)은
+  미연결입니다.
 * 매크로 열 스위치도 나머지 키와 같은 트러스(스위치 → 다이오드 → 비아 → 행 버스)를 그대로 씁니다.
   인코더 푸시 스위치는 `S2 → D_ENC → ROW0` 로 짧게 90도 두 마디로 연결합니다.
 * 양면 **GND 존**(F.Cu, B.Cu) + GND는 별도 트랙으로도 전부 연결(존 필 없이도 통전).
@@ -218,34 +239,40 @@ ANSI 스태거(`T`|`Y`, `G`|`H`, `B`|`N`)를 그대로 가집니다. 다만 **�
    떨어져 있는지(같은 네트 패드 포함), 가장 가까운 거리 보고
 9. **다이오드가 아랫줄 핫스왑 소켓에서 3 mm 이상** 떨어져 있는지(자기 키 소켓은 제외), 가장
    가까운 거리 보고
+10. **USB-C 링크 포트(J1)**: 16핀이 모두 있고 VBUS는 `VCC`, GND 4핀과 **쉴드 다리 4개**는 `GND`,
+   D+ (A6/B6)·D- (A7/B7)는 각각 짝이 묶여 서로 다른 UART 넷(`TX`/`RX`)이며 CC/SBU 4핀은 미연결,
+   그리고 패드 줄이 보드 **윗변에서 0.3~1.6 mm 안쪽**에 있고 개구부가 −Y(위)를 향하는지
 
 ```
 $ python3 scripts/verify_pcb.py
 ======================================================================
 checking choc-split-60-left.kicad_pcb
-  pads=171 tracks=254 vias=39 nets=55
+  pads=187 tracks=283 vias=48 nets=55
   stabilizers=2 holes=8 cutouts=4 (nearest copper 1.815 mm)
     SW23  2.25u: 4/4 holes, nearest copper 0.325 mm (3.0 x 4.0 hole at 9.53, 74.91)
     SW33  2.00u: 4/4 holes, nearest copper 0.325 mm (3.0 x 4.0 hole at 88.11, 93.96)
   OK: all checks passed
-  via in pad: 39 vias, nearest pad/hole 0.642 mm (via at 62.15, 39.27, hole SW18)
+  via in pad: 48 vias, nearest pad/hole 0.642 mm (via at 62.15, 39.27, hole SW18)
   diode to next row socket: nearest 4.550 mm (D17 to SW24)
+  USB-C link USB_C_Receptacle_HRO_TYPE-C-31-M-12: 20 pads centred (143.60, -19.77), pad row 7.23 mm inside the top edge (mouth at the edge), D+ ('TX',) / D- ('RX',)
 ======================================================================
 checking choc-split-60-right.kicad_pcb
-  pads=184 tracks=306 vias=61 nets=58
+  pads=200 tracks=332 vias=62 nets=58
   stabilizers=3 holes=12 cutouts=6 (nearest copper 1.630 mm)
     SW23  2.25u: 4/4 holes, nearest copper 0.325 mm (3.0 x 4.0 hole at 128.59, 55.87)
     SW33  2.25u: 4/4 holes, nearest copper 0.325 mm (3.0 x 4.0 hole at 38.09, 93.96)
     SW8   2.00u: 4/4 holes, nearest copper 0.325 mm (3.0 x 4.0 hole at 130.97, 17.77)
   OK: all checks passed
-  via in pad: 61 vias, nearest pad/hole 0.642 mm (via at 52.62, 39.27, hole SW19)
+  via in pad: 62 vias, nearest pad/hole 0.642 mm (via at 52.62, 39.27, hole SW19)
   diode to next row socket: nearest 4.550 mm (D28 to SW35)
+  USB-C link USB_C_Receptacle_HRO_TYPE-C-31-M-12: 20 pads centred (-8.90, -19.77), pad row 7.23 mm inside the top edge (mouth at the edge), D+ ('RX',) / D- ('TX',)
 ```
 
 > 스태빌 타원 홀 20개 중 가장 가까운 구리는 이제 **0.325 mm**(행 버스)로, 바로 옆 통로에 놓인
 > 트랙 두 줄과 같은 값입니다. 컷아웃 10개는 가장 가까운 구리에서 **1.815 mm(좌) / 1.630 mm(우)**,
 > 비아–패드 최소 **0.642 mm**, 다이오드–아랫줄 소켓 최소 **4.550 mm** — 모두 요구치를 넘고
-> 충돌 0건입니다.
+> 충돌 0건입니다. USB-C 링크 포트는 패드 줄이 윗변에서 **0.5 mm** 안쪽, D+/D-가 각각 `TX`/`RX`
+> 한 넷으로 묶여 있고 CC/SBU 4핀은 미연결로 확인됐습니다.
 
 > KiCad DRC가 아니라 자체 기하 검증입니다. 계산 근거는 `scripts/verify_pcb.py`에 그대로 들어 있습니다.
 > KiCad에서 열어 `Inspect → Design Rules Checker`를 한 번 더 돌리는 것을 권장합니다.
@@ -262,7 +289,7 @@ checking choc-split-60-right.kicad_pcb
 | 4 | 72 | 1N4148W (SOD‑123) | 캐소드(띠) 방향 주의 (D_ENC 포함) |
 | 5 | 1 | Alps EC11 / Bourns PEC11R 인코더 (푸시 포함) | 6 mm 축, 너트/와셔 포함품 |
 | 6 | 1 | 6 mm D컷 노브 | 인코더 축용 |
-| 7 | 2 | TRRS 잭 PJ‑320A | 3.5 mm 4극 |
+| 7 | 2 | USB-C 리셉터클 16핀 (HRO **TYPE‑C‑31‑M‑12**) | 좌우 링크 전용. **플라스틱 로케이팅 포스트 2개는 납땜 전에 밀봉 절단**(이 풋프린트는 그 홀을 뺐습니다 — 아래 설명) |
 | 8 | 2 | 6×6×5 mm 택트 스위치 | 리셋 |
 | 9 | 12 | M2 나사/너트 | 홀 2.2 mm, 보드당 6개 |
 | 10 | 71 | **MX 호환** 로우프로파일 키캡 | 1u 58 / 1.25u 5 / 1.5u 2 / 1.75u 1 / 2u 2 / 2.25u 3 — Choc v1 전용(두 갈래 스템) 키캡은 **장착 불가**, MX 십자 스템용 |
@@ -273,8 +300,8 @@ checking choc-split-60-right.kicad_pcb
 
 | | 좌 | 우 |
 |---|---|---|
-| 트랙 | 254 세그먼트 | 306 세그먼트 |
-| 비아 (0.6/0.3 mm) | 39 | 61 |
+| 트랙 | 283 세그먼트 | 332 세그먼트 |
+| 비아 (0.6/0.3 mm) | 48 | 62 |
 | 네트 | 55 | 58 |
 | 스태빌 타원 홀 | 8 (2키) | 12 (3키) |
 | 스태빌 컷아웃 | 4 | 6 |
@@ -296,7 +323,7 @@ checking choc-split-60-right.kicad_pcb
    * Surface finish: HASL (무연)
    * Gold fingers / impedance / castellation: 없음
    * SMT 조립은 하지 않습니다(전 부품 수동 납땜).
-4. 주문 전 KiCad 3D 뷰어로 **스위치·MCU·TRRS·인코더 간섭**을 한 번 확인하세요.
+4. 주문 전 KiCad 3D 뷰어로 **스위치·MCU·USB-C·인코더 간섭**을 한 번 확인하세요.
    특히 인코더는 보디가 12.4 mm라 1u 자리에 들어가지만, 노브가 키캡보다 높으므로
    케이스 상판을 만들 때 **노브 자리 홀**을 따로 뚫어야 합니다.
 
@@ -308,7 +335,13 @@ checking choc-split-60-right.kicad_pcb
    다이오드의 **캐소드 띠가 비아(행 버스) 쪽**을 향합니다.
 2. 앞면에 MCU 핀 소켓(2×12)을 납땜하고 RP2040 Pro Micro를 꽂습니다.
    **USB‑C 커넥터가 보드 바깥쪽 가장자리**를 향하도록 넣으세요(좌: 왼쪽, 우: 오른쪽).
-3. TRRS 잭과 리셋 택트 스위치를 납땜합니다.
+3. **USB-C 링크 리셉터클(J1)** 과 리셋 택트 스위치를 납땜합니다. 커넥터는 보드 **윗변**에
+   붙어 있고 개구부가 보드 밖(위)을 향합니다 — 16핀 SMD 패드가 가장자리에서 0.5 mm 안쪽에
+   있으니 납땜 후 **돋보기로 브리지(0.5 mm 피치)를 확인**하세요.
+   > **중요**: 이 풋프린트는 HRO 도면의 **로케이팅 포스트 홀(Ø0.65, ±2.89 mm)을 뺐습니다**.
+   > 그 홀이 VBUS 패드 바로 뒤를 막아 2층 기판에서 VBUS를 빼낼 통로가 없기 때문입니다(VBUS 패드에서
+   > 옆 패드까지 0.665 mm). 커넥터 아래면의 **플라스틱 포스트 2개를 니퍼로 PCB 면과 같게 잘라**
+   > 평평하게 만든 뒤 올리세요. 쉴드 다리 4개와 SMD 16핀으로 충분히 고정됩니다.
 4. **좌측** 매크로 열 맨 위에 EC11 인코더를 꽂아 납땜하고, 너트로 고정한 뒤 노브를 끼웁니다.
    핀 배열은 위에서부터 `A – C – B`(2.5 mm 피치), 반대쪽이 푸시 스위치 `S1 / S2` 입니다.
    > 사용하는 인코더가 PEC11R 계열이 아니면 **핀 피치(2.5 mm)와 마운트 포스트 지름(2.1 mm)** 을
@@ -322,7 +355,8 @@ checking choc-split-60-right.kicad_pcb
    > **주의**: ① 체리 MX용 스태빌은 규격이 달라 **들어가지 않습니다**. ② Choc v1 스위치도
    > **들어가지 않습니다**(중심 홀·가이드 포스트가 다름). ③ 스태빌 하우징이 PCB 아래로 빠지므로
    > **1.6 mm 기판 기준**입니다(1.2 mm는 심 필요).
-6. TRRS 케이블로 좌우를 연결하고, USB를 **좌측**에 연결합니다.
+6. **USB-C 링크 케이블**로 좌우를 연결하고, USB는 **좌측**에 연결합니다. 링크 포트는
+   `LINK ONLY` — PC나 충전기에 꽂지 마세요(A-to-C 케이블은 특히 금지).
 
 > **보강판/케이스**: 본 리포에는 케이스·보강판 도면이 없습니다. Choc v2 표준 컷아웃
 > (14×14 mm 스위치 홀, 19.05 mm 피치, 1.6 mm 판재)으로 별도 제작하면 됩니다.
@@ -394,7 +428,7 @@ make choc_split_60:vial
 
 ```
 pcb/      choc-split-60-{left,right}.kicad_{pro,sch,pcb} + fp-lib-table
-libs/     choc60.pretty (Choc v2 핫스왑, SOD-123, Pro Micro RP2040, TRRS, 택트, EC11, M2,
+libs/     choc60.pretty (Choc v2 핫스왑, SOD-123, Pro Micro RP2040, USB-C 16P, 택트, EC11, M2,
           Stabilizer_Choc_V2_PCBMount_2u)
 scripts/  generate_pcb.py (설계·배선 생성), verify_pcb.py (검증), preview.py,
           gen_firmware.py (info.json/vial.json/LAYOUT 헤더 생성), layout_kle.py (KLE 도면),
@@ -424,6 +458,37 @@ python3 scripts/sch_images.py      # 회로도 리뷰 PNG (docs/review/sch-left/
 ---
 
 ## 10. 변경 이력
+
+**2026-11-25 (9) 좌우 연결 TRRS → USB-C 링크 포트 (상단 안쪽)**
+* 좌우 연결 커넥터를 **TRRS PJ‑320A(3.5 mm 4극)** 에서 **USB-C 16핀 리셉터클**(HRO `TYPE-C-31-M-12`
+  규격, KiCad `Connector_USB` 풋프린트)로 바꿨습니다. 부품은 `libs/choc60.pretty/` 에
+  `USB_C_Receptacle_HRO_TYPE-C-31-M-12.kicad_mod` 로 들어 있습니다.
+* 위치를 각 하프의 **안쪽 상단 가장자리**로 옮겼습니다 — 좌 보드는 오른쪽 위(`x 143.6`), 우 보드는
+  왼쪽 위(`x -8.9`). HRO `TYPE-C-31-M-12` 는 **개구부가 +Y, 16핀 패드가 뒤쪽(-Y)** 이라 **180도 돌려**
+  배치했고(`y -23.81`), 개구부가 보드 **윗변**을 향해 케이블이 **위에서** 꽂힙니다. 권장 레이아웃대로
+  보드 끝을 로케이팅 홀 선에서 5.79 mm 앞에 두어 **몸체가 윗변 밖으로 0.46 mm** 살짝 나오고,
+  16핀 패드 줄은 윗변에서 **7.23 mm** 안쪽입니다.
+* 신호는 `VBUS`(A4·B4·A9·B9) = `VCC`, `GND`(A1·B1·A12·B12) + **쉴드 다리 4개** = `GND`,
+  `D+`(A6·B6) / `D-`(A7·B7) = UART `TX`/`RX`(좌우는 서로 교차). `CC1·CC2·SBU1·SBU2` 는 **미연결**
+  — 5.1k CC 풀다운은 달지 않았습니다(이유는 2절 “USB-C 링크 배선”).
+* 실크에 **`LINK ONLY`** 를 커넥터 옆(보드 안쪽을 향한 쪽)에 세로로 넣어 이 포트가 PC용이 아님을
+  표시했습니다.
+* 0.5 mm 피치 16핀은 패드 사이(0.2 mm)로 트랙도 비아도 못 지나가므로, `build_usbc_fanout()` 에
+  **손 팬아웃**을 넣었습니다: D- 두 줄(B7·A7)을 45도로 벌려 A6 비아 자리를 만들고, A6/B6는
+  **B.Cu 한 줄**로 묶고, VBUS 두 패드는 보드 안쪽 7.05 mm에서 합쳐 비아 하나로 B.Cu로 내리며, GND는
+  쉴드 4다리까지 F.Cu로 묶었습니다.
+* **로케이팅 포스트 홀(Ø0.65, ±2.89 mm)은 뺐습니다.** VBUS 패드 바로 뒤를 막고 있어 2층 기판에서
+  VBUS가 나갈 통로가 없습니다(VBUS 패드 옆 간격 0.665 mm < 필요한 0.75 mm). 커넥터 아래면의
+  **플라스틱 포스트 2개를 니퍼로 잘라** 평평하게 만든 뒤 납땜하세요.
+* 커넥터가 들어간 자리 때문에 상단 마운팅 홀을 옮겼습니다 — 좌 `x 146 → 130`, 우 `x -6 → 6`
+  (같은 윗변 띠, 커넥터·팬아웃과 7 mm 이상).
+* 검증기에 **항목 10(USB-C 핀·넷·방향·윗변 위치)** 을 추가했습니다. 결과: 좌 pads 187 · tracks 283 ·
+  vias 48 / 우 pads 200 · tracks 332 · vias 62, **미연결 0 · 클리어런스 위반 0 · via-on-pad 0**.
+* 라우터도 한 군데 손봤습니다. **네트가 없는 패드**(미사용 CC/SBU)를 장애물 지도에 하드 블록으로
+  넣었습니다. 0.5 mm 피치에서는 이웃 패드의 부풀린 금지 구역이 겹치는데, 장애물 지도가 셀마다
+  네트를 하나만 기억해서 **다른 네트 패드의 구역이 같은 네트 패드 구역에 덮여** 지워지면 그 틈으로
+  트랙이 지나갈 수 있었습니다(우측 하프에서 실제로 발생 → 검증기가 잡음).
+* 회로도 J1도 16핀 + 쉴드 심볼로 바꾸고 CC/SBU 4핀에 no-connect를 표시했습니다.
 
 **2026-11-25 (8) 회로도 리뷰 이미지**
 * `docs/review/sch-left.png` · `sch-right.png` — A3 회로도 한 장을 **4621 × 3268 px(11 px/mm)** 로
@@ -550,7 +615,7 @@ python3 scripts/sch_images.py      # 회로도 리뷰 PNG (docs/review/sch-left/
 * Choc v1/v2 공용 핫스왑 소켓 풋프린트 형상: [keyswitch-kicad-library](https://github.com/perigoso/keyswitch-kicad-library) (CC‑BY‑SA‑4.0)
 * Choc v2 스위치 홀 규격: Kailh `CPG135301D01` 도면 (중심 Ø5.00, 핀 2개 동일, 가이드 포스트 Ø1.60 1개)
 * Choc v2 PCB 마운트 스태빌 풋프린트: [Salicylic-acid3/KiCAD_FootPrint](https://github.com/Salicylic-acid3/KiCAD_FootPrint) `kbd_Stabilizer.pretty/Choc_v2_PCBMountStab_2u.kicad_mod` (사용 안내: https://salicylic-acid3.hatenablog.com/entry/chocv2-stab-guide)
-* TRRS PJ‑320A 풋프린트: [Keebio‑Parts](https://github.com/keebio/Keebio-Parts.pretty)
+* USB-C 리셉터클 풋프린트: [KiCad Connector_USB](https://github.com/KiCad/kicad-footprints) `USB_C_Receptacle_HRO_TYPE-C-31-M-12` (HRO `TYPE-C-31-M-12` 도면, 로케이팅 포스트 홀 2개만 생략)
 * EC11 인코더 패드 좌표: Bourns PEC11R 데이터시트 (A–C–B 2.5 mm 피치, 마운트 2.1 mm)
 * QMK / VIAL 펌웨어
 

@@ -44,17 +44,19 @@ def render_side(board, path, copper, silk, mirror, title, scale=5.0):
             x = x1 - (x - x0)
         return ((x - x0) * scale + 10, (y - y0) * scale + 10)
 
-    # silkscreen of the shown side
+    # silkscreen of the shown side (footprint graphics are local coordinates)
     for fp in board.fps:
         for gr in fp.graphics:
             if gr[3] != silk:
                 continue
             if gr[0] == "line":
-                d.line([P(*gr[1]), P(*gr[2])], fill=SILK,
-                       width=max(1, int(gr[4] * scale)))
+                d.line([P(*place(fp.px, fp.py, gr[1][0], gr[1][1], fp.ang, fp.side)),
+                        P(*place(fp.px, fp.py, gr[2][0], gr[2][1], fp.ang, fp.side))],
+                       fill=SILK, width=max(1, int(gr[4] * scale)))
             elif gr[0] == "circle":
                 (cx, cy), r = gr[1], gr[2][1]
-                a, b = P(cx - r, cy - r), P(cx + r, cy + r)
+                a, b = (P(*place(fp.px, fp.py, cx - r, cy - r, fp.ang, fp.side)),
+                        P(*place(fp.px, fp.py, cx + r, cy + r, fp.ang, fp.side)))
                 d.ellipse([a[0], a[1], b[0], b[1]], outline=SILK,
                           width=max(1, int(gr[4] * scale)))
 

@@ -593,9 +593,9 @@ def main(argv):
     bad = 0
     for half in halves:
         lines = [
-            "choc-split-60 %s half - switches, diodes, controller, TRRS, reset%s"
+            "choc-split-60 %s half - switches, diodes, controller, USB-C link, reset%s"
             % (half, ", rotary encoder" if half == "left" else ""),
-            "Size A3   Date 2026-11-25   Rev 1.0   Sheet 1/1",
+            "Size A3   Date 2026-11-25   Rev 1.1   Sheet 1/1",
             "File pcb/choc-split-60-%s.kicad_sch   Project dasoo_split" % half,
             "Rendered by scripts/sch_images.py - COL2ROW matrix, one diode per key",
             "github.com/Samdasoo1076/dasoo_split",

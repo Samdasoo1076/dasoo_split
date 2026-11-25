@@ -240,33 +240,65 @@ def pro_micro_rp2040(mirror=False):
                 tags="RP2040 Pro Micro Elite-Pi", pads=pads, graphics=g)
 
 
-def trrs_pj320a():
-    pads = [
-        dict(num="1", kind="thru_hole", shape="oval", lx=-2.3, ly=11.3, w=1.6, h=2.0,
-             drill=(0.9, 1.3), layers=("*.Cu", "*.Mask"), name="SLEEVE"),
-        dict(num="2", kind="thru_hole", shape="oval", lx=2.3, ly=10.2, w=1.6, h=2.0,
-             drill=(0.9, 1.3), layers=("*.Cu", "*.Mask"), name="TIP"),
-        dict(num="3", kind="thru_hole", shape="oval", lx=2.3, ly=6.2, w=1.6, h=2.0,
-             drill=(0.9, 1.3), layers=("*.Cu", "*.Mask"), name="RING1"),
-        dict(num="4", kind="thru_hole", shape="oval", lx=2.3, ly=3.2, w=1.6, h=2.0,
-             drill=(0.9, 1.3), layers=("*.Cu", "*.Mask"), name="RING2"),
-        dict(num="", kind="np_thru_hole", shape="circle", lx=0, ly=8.6, w=0.8, drill=(0.8, 0.8)),
-        dict(num="", kind="np_thru_hole", shape="circle", lx=0, ly=1.6, w=0.8, drill=(0.8, 0.8)),
-    ]
-    g = [("line", (-3.05, 12.1), (3.05, 12.1), "F.SilkS", 0.15),
-         ("line", (3.05, 12.1), (3.05, 0), "F.SilkS", 0.15),
-         ("line", (3.05, 0), (-3.05, 0), "F.SilkS", 0.15),
-         ("line", (-3.05, 0), (-3.05, 12.1), "F.SilkS", 0.15),
-         ("line", (-2.8, 0), (-2.8, -2.0), "F.SilkS", 0.15),
-         ("line", (-2.8, -2.0), (2.8, -2.0), "F.SilkS", 0.15),
-         ("line", (2.8, -2.0), (2.8, 0), "F.SilkS", 0.15),
-         ("line", (-3.6, -2.6), (3.6, -2.6), "F.CrtYd", 0.05),
-         ("line", (3.6, -2.6), (3.6, 12.6), "F.CrtYd", 0.05),
-         ("line", (3.6, 12.6), (-3.6, 12.6), "F.CrtYd", 0.05),
-         ("line", (-3.6, 12.6), (-3.6, -2.6), "F.CrtYd", 0.05)]
-    return dict(name="TRRS_PJ-320A", attr="through_hole",
-                descr="TRRS jack PJ-320A (4 pole, through hole)",
-                tags="TRRS jack PJ-320A", pads=pads, graphics=g)
+def usb_c_receptacle():
+    """USB 2.0 Type-C receptacle, 16 pin (HRO TYPE-C-31-M-12 geometry).
+
+    Pad geometry copied from KiCad's
+    ``Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12``: 16 SMT pins on
+    0.5 mm pitch at y = -4.045 (the A/B pairs of the four shell-side power pins
+    share one physical pad each, exactly as on the part, so the plug works in
+    either orientation), four shell legs, 8.94 x 7.30 mm body, mating face
+    towards -Y.
+
+    One deliberate deviation: the two Ø0.65 locating peg holes at
+    (+-2.89, -2.60) are left out.  They sit directly behind the VBUS pads
+    (+-2.45) and leave only 0.665 mm to the next pad, which is narrower than
+    the 0.2 mm clearance + 0.3 mm hole clearance + 0.25 mm track the two VBUS
+    pads need to get out on a two layer board.  Cut the two plastic locating
+    pegs flush before soldering; the four shell legs still hold the part and
+    the 16 pads carry the signal.
+    """
+    smd = ("F.Cu", "F.Mask", "F.Paste")
+    pads = []
+    for lx, num, w in ((-3.25, "A1", 0.6), (-3.25, "B12", 0.6),
+                       (-2.45, "A4", 0.6), (-2.45, "B9", 0.6),
+                       (-1.75, "B8", 0.3), (-1.25, "A5", 0.3),
+                       (-0.75, "B7", 0.3), (-0.25, "A6", 0.3),
+                       (0.25, "A7", 0.3), (0.75, "B6", 0.3),
+                       (1.25, "A8", 0.3), (1.75, "B5", 0.3),
+                       (2.45, "A9", 0.6), (2.45, "B4", 0.6),
+                       (3.25, "A12", 0.6), (3.25, "B1", 0.6)):
+        pads.append(dict(num=num, kind="smd", shape="rect", lx=lx, ly=-4.045,
+                         w=w, h=1.45, layers=smd, name=num))
+    for sx in (-1, 1):
+        pads.append(dict(num="S1", kind="thru_hole", shape="oval",
+                         lx=sx * 4.32, ly=1.05, w=1.0, h=1.6, drill=(0.6, 1.2),
+                         layers=("*.Cu", "*.Mask"), name="SHIELD"))
+        pads.append(dict(num="S1", kind="thru_hole", shape="oval",
+                         lx=sx * 4.32, ly=-3.13, w=1.0, h=2.1, drill=(0.6, 1.7),
+                         layers=("*.Cu", "*.Mask"), name="SHIELD"))
+    g = [("line", (-4.7, 2.0), (-4.7, 3.9), "F.SilkS", 0.12),
+         ("line", (-4.7, -1.9), (-4.7, 0.1), "F.SilkS", 0.12),
+         ("line", (4.7, 2.0), (4.7, 3.9), "F.SilkS", 0.12),
+         ("line", (4.7, -1.9), (4.7, 0.1), "F.SilkS", 0.12),
+         ("line", (-4.7, 3.9), (4.7, 3.9), "F.SilkS", 0.12),
+         # the mouth: two short ticks either side of the plug opening
+         ("line", (-4.7, -1.9), (-3.5, -1.9), "F.SilkS", 0.12),
+         ("line", (4.7, -1.9), (3.5, -1.9), "F.SilkS", 0.12),
+         # body and courtyard move with the part, so keep them on the fab side
+         ("line", (-4.47, -3.65), (4.47, -3.65), "F.Fab", 0.1),
+         ("line", (4.47, -3.65), (4.47, 3.65), "F.Fab", 0.1),
+         ("line", (4.47, 3.65), (-4.47, 3.65), "F.Fab", 0.1),
+         ("line", (-4.47, 3.65), (-4.47, -3.65), "F.Fab", 0.1),
+         ("line", (-5.32, -5.27), (5.32, -5.27), "F.CrtYd", 0.05),
+         ("line", (5.32, -5.27), (5.32, 4.15), "F.CrtYd", 0.05),
+         ("line", (5.32, 4.15), (-5.32, 4.15), "F.CrtYd", 0.05),
+         ("line", (-5.32, 4.15), (-5.32, -5.27), "F.CrtYd", 0.05)]
+    return dict(name="USB_C_Receptacle_HRO_TYPE-C-31-M-12", attr="smd",
+                descr="USB 2.0 Type-C receptacle, 16 pin, HRO TYPE-C-31-M-12 "
+                      "(locating peg holes omitted)",
+                tags="USB Type-C receptacle 16P USB2.0",
+                pads=pads, graphics=g, ref_at=(0.0, 6.3), val_at=(0.0, 7.6))
 
 
 def reset_switch():
@@ -398,7 +430,7 @@ FACTORY = {
     "stab": stabilizer_choc_v2_2u,
     "diode": diode_sod123,
     "mcu": pro_micro_rp2040,
-    "trrs": trrs_pj320a,
+    "usbc": usb_c_receptacle,
     "reset": reset_switch,
     "encoder": rotary_ec11,
     "mount": mount_hole_m2,

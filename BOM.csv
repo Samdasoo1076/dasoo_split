@@ -4,7 +4,7 @@ Item,Qty,Designator,Value / Part,Footprint,Notes
 3,71,"SW1-SW33 + SW1-SW38",Kailh Choc hot swap socket CPG135001S30 (fits v1 and v2 switches),built into switch footprint,soldered on the back side
 4,72,"D1-D33 + D1-D38 + D_ENC",1N4148W SOD-123,choc60:D_SOD-123,cathode band towards the via / row bus (D_ENC belongs to the encoder push switch)
 5,1,RE1,Alps EC11 / Bourns PEC11R rotary encoder with push switch,choc60:RotaryEncoder_EC11,left half macro column, 6 mm shaft, nut + washer
-6,2,J1,TRRS jack PJ-320A (4 pole),choc60:TRRS_PJ-320A,3.5 mm TRRS cable between halves
+6,2,J1,USB-C receptacle 16 pin (HRO TYPE-C-31-M-12),choc60:USB_C_Receptacle_HRO_TYPE-C-31-M-12,"link cable between the halves ONLY (LINK ONLY on the silk); trim the two plastic locating pegs flush - this footprint omits their holes; VBUS=VCC, GND, D+=TX, D-=RX crossed between halves; CC1/CC2/SBU unconnected (no 5.1k pull-downs)"
 7,2,SW_RST,6x6x5 mm tactile switch,choc60:SW_Reset_6mm,pulls RST to GND
 8,12,H1-H12,M2 screw + nut (2.2 mm hole),choc60:MountingHole_M2,6 per half
 9,71,,"MX compatible low profile keycaps (Choc v2 has an MX style cross stem)",,- 58x 1u, 5x 1.25u, 2x 1.5u, 1x 1.75u, 2x 2u, 3x 2.25u; Choc v1 two-prong keycaps do NOT fit

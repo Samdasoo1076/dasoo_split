@@ -151,6 +151,16 @@ class Router:
                 self._stamp(self.blocked, l, p.gx, p.gy, p.w, p.h, p.gang, p.shape,
                             inflate + 0.10)
             return
+        if not nid:
+            # a pad with no net (an unused USB-C pin, say) can never be entered:
+            # mark it as hard blocked.  With 0.5 mm pitch its inflated keep-out
+            # overlaps the neighbouring pads', and the single-net obstacle map
+            # would otherwise let a track through when the neighbour has a net.
+            for l in p.pad_layers():
+                lay = 0 if l == "F.Cu" else 1
+                self._stamp(self.blocked, lay, p.gx, p.gy, p.w, p.h, p.gang,
+                            p.shape, inflate)
+            return
         for l in p.pad_layers():
             lay = 0 if l == "F.Cu" else 1
             self._obst(lay, p.gx, p.gy, p.w, p.h, p.gang, p.shape, inflate, nid)

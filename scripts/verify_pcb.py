@@ -17,6 +17,11 @@ checks, for each half:
   8. no via sits on a pad (via in pad): every via is 0.30 mm or more from the
      copper edge of every pad and from every drilled hole
   9. every diode clears the hot swap socket of the key below by 3 mm or more
+ 10. the USB-C link port (J1) is present with all 16 pins plus the four shell
+     legs, VBUS on VCC, both shell legs and the four GND pins on GND, D+/D- on
+     the crossed UART pair (one half TX, the other RX), CC/SBU unconnected, and
+     the connector turned so that its mouth faces the top board edge (the pin
+     row 6.0 .. 8.5 mm inside it, no copper within 1 mm of the edge)
 
 Usage:  python3 scripts/verify_pcb.py [pcb/*.kicad_pcb ...]
 """
@@ -851,6 +856,81 @@ def check_diode_socket(b):
     return errs, worst
 
 
+def check_usbc(b, outline):
+    """The USB-C link port: pins, nets, orientation and its place on the edge."""
+    errs = []
+    fname, pads = None, []
+    for p in b.pads:
+        if p.shape == "hole" or p.ref != "J1":
+            continue
+        fname = p.fp
+        pads.append(p)
+    if not pads:
+        return ["no USB-C link port (J1) on the board"], None
+    if "USB_C_Receptacle" not in (fname or ""):
+        errs.append("J1 is %s, not a USB-C receptacle" % fname)
+    by = defaultdict(list)
+    for p in pads:
+        by[p.num].append(p)
+    want = ("A1", "A4", "A5", "A6", "A7", "A8", "A9", "A12",
+            "B1", "B4", "B5", "B6", "B7", "B8", "B9", "B12")
+    for num in want:
+        if len(by.get(num, [])) < 1:
+            errs.append("J1 has no pad %s" % num)
+    shell = by.get("S1", [])
+    if len(shell) != 4:
+        errs.append("J1 has %d shell legs, expected 4" % len(shell))
+    elif any(p.shape == "hole" for p in shell):
+        errs.append("J1 shell legs are not plated through holes")
+    sig = [p for p in pads if p.num != "S1"]
+    nets = {num: sorted({p.net for p in ps if p.net})
+            for num, ps in by.items() if num != "S1"}
+    for num in ("A4", "B9", "A9", "B4"):
+        if nets.get(num) != ["VCC"]:
+            errs.append("J1 %s (VBUS) is on %s, expected VCC" % (num, nets.get(num)))
+    for num in ("A1", "B12", "A12", "B1"):
+        if nets.get(num) != ["GND"]:
+            errs.append("J1 %s (GND) is on %s, expected GND" % (num, nets.get(num)))
+    for num in ("A5", "B5", "A8", "B8"):
+        if nets.get(num):
+            errs.append("J1 %s (CC/SBU) should stay unconnected, is on %s"
+                        % (num, nets.get(num)))
+    dplus = set(tuple(nets.get(n, [])) for n in ("A6", "B6"))
+    dminus = set(tuple(nets.get(n, [])) for n in ("A7", "B7"))
+    if len(dplus) != 1 or len(dminus) != 1:
+        errs.append("D+ pads A6/B6 or D- pads A7/B7 are not tied together")
+    else:
+        dp, dm = list(dplus)[0], list(dminus)[0]
+        if not dp or not dm or dp == dm:
+            errs.append("D+ on %s and D- on %s (must be two different UART nets)" % (dp, dm))
+        elif set(dp + dm) != {"TX", "RX"}:
+            errs.append("D+/D- on %s/%s, expected the TX/RX pair" % (dp, dm))
+    for p in shell:
+        if p.net != "GND":
+            errs.append("J1 shell leg at (%.2f, %.2f) on %s, expected GND"
+                        % (p.x, p.y, p.net))
+    # The connector's mouth has to face the top board edge: the 16 pins sit at
+    # the BACK of the part, so the pad row is about 7.2 mm inside the edge while
+    # the 8.94 x 7.30 mm body overhangs it by 0.46 mm.
+    row_y = sum(p.y for p in sig) / float(len(sig))
+    y0 = outline[1] if outline else None
+    if y0 is not None:
+        inset = row_y - y0
+        if not (6.0 - 1e-6 <= inset <= 8.5 + 1e-6):
+            errs.append("J1 pad row is %.3f mm inside the top edge (expected 6.0 .. "
+                        "8.5: the pins at the back, the mouth at the edge)" % inset)
+        near = min(p.y - max(p.w, p.h) / 2.0 for p in pads)
+        if near < y0 + 1.0 - 1e-6:
+            errs.append("J1 copper reaches within %.2f mm of the top board edge"
+                        % (near - y0))
+    cx = sum(p.x for p in sig) / float(len(sig))
+    rep = dict(ref="J1", fp=fname, x=cx, y=row_y,
+               tip=row_y - (outline[1] if outline else 0), n=len(pads),
+               dplus=list(dplus)[0] if len(dplus) == 1 else None,
+               dminus=list(dminus)[0] if len(dminus) == 1 else None)
+    return errs, rep
+
+
 def check_zones(b):
     errs = []
     zl = [(l, n) for (l, n, pts) in b.zones if n == "GND"]
@@ -897,6 +977,8 @@ def main(argv):
         errs += via_errs
         dio_errs, (dio_d, dio_ref, dio_sock) = check_diode_socket(b)
         errs += dio_errs
+        usb_errs, usb = check_usbc(b, outline)
+        errs += usb_errs
         n_pads = len([p for p in b.pads if p.shape != "hole"])
         print("  pads=%d tracks=%d vias=%d nets=%d" %
               (n_pads, len(b.tracks), len(b.vias), len(b.nets)))
@@ -926,6 +1008,12 @@ def main(argv):
         if dio_sock is not None:
             print("  diode to next row socket: nearest %.3f mm (%s to %s)"
                   % (dio_d, dio_ref, dio_sock))
+        if usb:
+            print("  USB-C link %s: %d pads centred (%.2f, %.2f), pad row %.2f mm "
+                  "inside the top edge (mouth at the edge), D+ %s / D- %s"
+                  % ((usb["fp"] or "").replace("choc60:", ""),
+                     usb["n"], usb["x"], usb["y"],
+                     usb["tip"], usb["dplus"], usb["dminus"]))
     return rc
 
 

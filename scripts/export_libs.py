@@ -73,7 +73,7 @@ def main():
     specs.append(("ProMicro_RP2040", sp))
     sp = parts.pro_micro_rp2040(mirror=True)
     specs.append(("ProMicro_RP2040_Mirrored", sp))
-    for name, fn in (("TRRS_PJ-320A", parts.trrs_pj320a),
+    for name, fn in (("USB_C_Receptacle_HRO_TYPE-C-31-M-12", parts.usb_c_receptacle),
                      ("SW_Reset_6mm", parts.reset_switch),
                      ("RotaryEncoder_EC11", parts.rotary_ec11),
                      ("MountingHole_M2", parts.mount_hole_m2),

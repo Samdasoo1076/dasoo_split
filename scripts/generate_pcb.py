@@ -64,6 +64,7 @@ def build(hand, verbose=True):
     b = Board(hand)
     b.build()
     b.build_truss()
+    b.build_usbc_fanout()
     r = Router(b)
     r.build_masks()
 
@@ -88,9 +89,14 @@ def build(hand, verbose=True):
     for net in ["ENC_A", "ENC_B"]:
         _connect_pads(b, r, net, SIG_W)
     # ---- power / serial ----------------------------------------------------
-    for net in ["RST", "TX", "RX", "VCC"]:
-        _connect_pads(b, r, net, PWR_W if net == "VCC" else SIG_W)
-    _connect_pads(b, r, "GND", PWR_W)
+    # RST only links the reset switch to the controller; the four link nets are
+    # already fanned out of the USB-C connector by hand (build_usbc_fanout), so
+    # the router only has to run them from that fan-out to the controller pin.
+    _connect_pads(b, r, "RST", SIG_W)
+    for net, width in ((b.dplus, SIG_W), (b.dminus, SIG_W),
+                       ("VCC", PWR_W), ("GND", PWR_W)):
+        _connect_entry(b, r, net, width)
+    _connect_pads(b, r, "GND", PWR_W, skip_refs=("J1",))
     if verbose and r.failed:
         print("  ! failed nets:", r.failed)
     return b, r
@@ -125,6 +131,47 @@ def _connect_pin(b, r, net):
     r.commit(nid, path, SIG_W, net)
 
 
+def _entry_cells(r, nid, pt, lay):
+    """Grid cells that sit on the hand routed copper around a point.
+
+    The maze grid is 0.25 mm and the hand drawn fan-out does not necessarily
+    land on a grid line, so the owner map can be empty along a perfectly good
+    track.  Take the cells of the square the point falls in (their centres are
+    at most 0.18 mm away, so they still overlap the 0.25 mm track) and keep the
+    ones no other net blocks.
+    """
+    blocked = r._blocked_for(nid)[lay]
+    iy, ix = r.cell(pt[0], pt[1])
+    out = []
+    for jy in (iy, iy + 1):
+        for jx in (ix, ix + 1):
+            if 0 <= jy < r.ny and 0 <= jx < r.nx and not blocked[jy, jx]:
+                out.append((lay, jy, jx))
+    if not out:
+        out = [(lay, iy, ix)]
+    return out
+
+
+def _connect_entry(b, r, net, width):
+    """Route a USB-C net from its hand placed fan-out to the controller pin."""
+    pt, layer = b.usbc_entry(net)
+    nid = b.net_id[net]
+    lay = 0 if layer == "F.Cu" else 1
+    src = _entry_cells(r, nid, pt, lay)
+    pad = next((p for p in b.mcu.pads if p.net == net), None)
+    if pad is None or not src:
+        r.failed.append((net, "no entry"))
+        return
+    goals = pad_cells(r, pad)
+    path = r.path(nid, src, goals, width=width)
+    if path is None:
+        path = r.path(nid, src, goals, width=width, prefer=None)
+    if path is None:
+        r.failed.append((net, "no path from the connector"))
+        return
+    r.commit(nid, path, width, net)
+
+
 def _connect_pad(b, r, pad, done=None):
     """Route one pad of an existing net into that net's routed copper."""
     net = pad.net
@@ -149,34 +196,58 @@ def _connect_pad(b, r, pad, done=None):
     r.commit(nid, path, SIG_W, net)
 
 
-def _connect_pads(b, r, net, width):
-    pads = [p for fp in b.fps if fp is not b.mcu for p in fp.pads if p.net == net]
+def _connect_pads(b, r, net, width, skip_refs=()):
+    pads = [p for fp in b.fps if fp is not b.mcu and fp.ref not in skip_refs
+            for p in fp.pads if p.net == net]
+    # the fan-out of a skipped part is copper of this net; only its own pads are
+    # not allowed to seed a new track (they were already wired by hand)
+    skip_cells = set()
+    for fp in b.fps:
+        if fp.ref in skip_refs:
+            for p in fp.pads:
+                if p.net:
+                    skip_cells.update(pad_cells(r, p))
     pads += [p for p in b.mcu.pads if p.net == net]
     if len(pads) < 2:
         return
     pads.sort(key=lambda p: (p.gx, p.gy))
     nid = b.net_id[net]
-    done = {id(pads[0])}
-    seed = pad_cells(r, pads[0])
-    for p in pads[1:]:
-        goals = pad_cells(r, p)
-        if not goals:
-            continue
-        excl = set(goals)
-        for q in pads:
-            if id(q) not in done and q is not p:
-                excl.update(pad_cells(r, q))
-        src = [c for c in (net_cells(r, net) + seed) if c not in excl]
+    # Start from copper that is already there (a net can reach this point half
+    # routed, e.g. GND from the USB-C fan-out), never from the first pad itself:
+    # seeding on a pad would grow a second island that never joins the first.
+    pending = list(pads)
+    for _ in range(len(pending) + 1):
+        if not pending:
+            return
+        goal = {id(p): (pad_cells(r, p) or pad_seed(r, p)) for p in pending}
+        excl = set()
+        for g in goal.values():
+            excl.update(g)
+        src = [c for c in net_cells(r, net)
+               if c not in excl and c not in skip_cells]
         if not src:
-            continue
-        path = r.path(nid, src, goals, width=width)
-        if path is None:
-            path = r.path(nid, src, goals, width=width, prefer=None)
-        if path is None:
-            r.failed.append((net, "no path to %s" % p.fp.ref))
-            continue
-        r.commit(nid, path, width, net)
-        done.add(id(p))
+            p = pending.pop(0)           # nothing routed yet: this pad seeds
+            src = goal[id(p)]
+        moved = False
+        for p in list(pending[::-1]):
+            goals = goal[id(p)]
+            path = r.path(nid, src, goals, width=width)
+            if path is None:
+                path = r.path(nid, src, goals, width=width, prefer=None)
+            if path is None:
+                continue
+            r.commit(nid, path, width, net)
+            pending.remove(p)
+            moved = True
+            excl = set()
+            for q in pending:
+                excl.update(goal[id(q)])
+            src = [c for c in net_cells(r, net)
+                   if c not in excl and c not in skip_cells]
+        if not moved:
+            break
+    for p in pending:
+        r.failed.append((net, "no path to %s" % p.fp.ref))
 
 
 def pad_seed(r, pad):

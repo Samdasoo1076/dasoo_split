@@ -92,6 +92,7 @@ class Board:
         self.net_names = []
         self.net_id = {}
         self.warnings = []
+        self.texts = []          # extra F.SilkS board text (title, LINK ONLY)
         self._n_stab = 0
         self.cutouts = stab_cutouts(hand)
 
@@ -112,6 +113,8 @@ class Board:
                              pads=[dict(p) for p in spec["pads"]],
                              graphics=spec["graphics"], attr=spec.get("attr"),
                              descr=spec.get("descr", ""), tags=spec.get("tags", ""))
+        fp.ref_at = spec.get("ref_at")
+        fp.val_at = spec.get("val_at")
         self.fps.append(fp)
         return fp
 
@@ -178,12 +181,26 @@ class Board:
             k["diode"].pad("1").net = k["row_net"]
             k["diode"].pad("2").net = k["knet"]
 
-        # MCU / TRRS / reset / mounts
+        # MCU / USB-C link / reset / mounts
         m = cfg["mcu"]
         self.mcu = self.add("mcu", "U1", "RP2040 Pro Micro", m["px"], m["py"], 0.0, "F",
                             mirror=m["mirror"])
-        t = cfg["trrs"]
-        self.trrs = self.add("trrs", "J1", "PJ-320A", t["px"], t["py"], t["ang"], "F")
+        t = cfg["usbc"]
+        self.usbc = self.add("usbc", "J1", "USB-C 16P link", t["px"], t["py"],
+                             t["ang"], "F")
+        # marking next to the port, on the side that faces the middle of the
+        # board (the port itself sits against the outer/inner board edge)
+        side = -1.0 if self.hand == "left" else 1.0
+        tx_x = t["px"] + side * 7.6
+        self.texts.append(dict(text="LINK ONLY", x=tx_x, y=t["py"] + 2.0,
+                               size=1.0, layer="F.SilkS", angle=90.0))
+        # J1 reference below the marking, expressed in the footprint's local
+        # frame (the part is placed turned, so a board point has to be mapped
+        # back through the placement rotation)
+        a = math.radians(t["ang"])
+        dx, dy = tx_x - t["px"], (t["py"] + 7.3) - t["py"]
+        self.usbc.ref_at = (dx * math.cos(a) - dy * math.sin(a),
+                            dx * math.sin(a) + dy * math.cos(a))
         r = cfg["reset"]
         self.reset = self.add("reset", "SW_RST", "Reset", r["px"], r["py"], r["ang"], "F")
         self.mounts = []
@@ -215,18 +232,108 @@ class Board:
                 p.net = pin_net[p.name]
                 self.net(p.net)
         left = self.hand == "left"
-        trrs = {"SLEEVE": "RX" if left else "TX",
-                "TIP": "VCC",
-                "RING1": "GND",
-                "RING2": "TX" if left else "RX"}
-        for p in self.trrs.pads:
-            if p.name in trrs:
-                p.net = trrs[p.name]
+        # USB-C link port.  The cable is straight through, so the UART pair is
+        # crossed here, exactly as the TRRS version did: the left half sends on
+        # D+ (GP0 / TX) and the right half on D- (GP0 / TX).
+        self.dplus = "TX" if left else "RX"
+        self.dminus = "RX" if left else "TX"
+        usb = {"A4": "VCC", "B9": "VCC", "A9": "VCC", "B4": "VCC",
+               "A1": "GND", "B12": "GND", "A12": "GND", "B1": "GND",
+               "A6": self.dplus, "B6": self.dplus,
+               "A7": self.dminus, "B7": self.dminus}
+        for p in self.usbc.pads:
+            if p.name == "SHIELD":
+                p.net = "GND"
+            elif p.num in usb:
+                p.net = usb[p.num]
+            if p.net:
                 self.net(p.net)
         # reset switch: left pair = RST, right pair = GND
         for p in self.reset.pads:
             p.net = "RST" if float(p.lx) < 0 else "GND"
             self.net(p.net)
+
+    # ------------------------------------------------------ USB-C fan-out
+    def _usbc_pt(self, lx, d):
+        """Connector local (pad column x, distance d into the board) -> board.
+
+        The USB-C pads sit on one line (local y -4.045) and every trace leaves
+        them towards the inside of the board, i.e. towards local -y, which is
+        ``d`` mm from the pad centre.
+        """
+        t = self.cfg["usbc"]
+        a = math.radians(t["ang"])
+        c, s = math.cos(a), math.sin(a)
+        ly = -4.045 - d
+        return (t["px"] + lx * c + ly * s, t["py"] - lx * s + ly * c)
+
+    def build_usbc_fanout(self):
+        """Hand route the 0.5 mm pitch USB-C pads out from under the connector.
+
+        The sixteen pads sit 0.5 mm apart, so a 0.6 mm via or a 0.25 mm track
+        can not run between them; every trace leaves its own pad straight into
+        the board and the two D+/D- pairs are joined past the pad row, where the
+        lanes can spread out.  The VBUS pair joins on F.Cu with one via down to
+        B.Cu, the D+ pair joins on B.Cu (its two vias sit further in than the
+        D- join, clear of the 0.625 mm a 0.6 mm via needs next to a 0.25 mm
+        track), and the D- pair joins on F.Cu.  GND takes the two wide pads and
+        all four shell legs.
+        """
+        dp, dm = self.dplus, self.dminus
+
+        def P(lx, d):
+            return self._usbc_pt(lx, d)
+
+        # D- (B7 left of the pair, A7 right of it): straight out, then step
+        # outwards so that A6 in the middle gets a free lane for its via
+        self.add_track(P(-0.75, 0.0), P(-0.75, 1.045), SIG_W, "F.Cu", dm)
+        self.add_track(P(-0.75, 1.045), P(-1.35, 1.645), SIG_W, "F.Cu", dm)
+        self.add_track(P(-1.35, 1.645), P(-1.35, 5.045), SIG_W, "F.Cu", dm)
+        self.add_track(P(0.25, 0.0), P(0.25, 1.445), SIG_W, "F.Cu", dm)
+        self.add_track(P(0.25, 1.445), P(0.9, 2.095), SIG_W, "F.Cu", dm)
+        self.add_track(P(0.9, 2.095), P(0.9, 5.045), SIG_W, "F.Cu", dm)
+        self.add_track(P(-1.35, 5.045), P(0.9, 5.045), SIG_W, "F.Cu", dm)
+        # D+ (A6, B6): A6 straight out into a via, B6 steps right and in to its
+        # own via; the two vias are tied on B.Cu
+        self.add_track(P(-0.25, 0.0), P(-0.25, 2.045), SIG_W, "F.Cu", dp)
+        self.add_via(*P(-0.25, 2.045), net=dp)
+        self.add_track(P(0.75, 0.0), P(0.75, 1.045), SIG_W, "F.Cu", dp)
+        self.add_track(P(0.75, 1.045), P(1.6, 1.895), SIG_W, "F.Cu", dp)
+        self.add_track(P(1.6, 1.895), P(1.6, 2.545), SIG_W, "F.Cu", dp)
+        self.add_via(*P(1.6, 2.545), net=dp)
+        self.add_track(P(-0.25, 2.045), P(1.25, 3.545), SIG_W, "B.Cu", dp)
+        self.add_track(P(1.25, 3.545), P(1.6, 3.545), SIG_W, "B.Cu", dp)
+        self.add_track(P(1.6, 3.545), P(1.6, 2.545), SIG_W, "B.Cu", dp)
+        # VCC: the two VBUS pads join at 7.045 and drop to B.Cu through one via
+        for sx in (-1, 1):
+            self.add_track(P(sx * 2.45, 0.0), P(sx * 2.45, 7.045),
+                           SIG_W, "F.Cu", "VCC")
+        self.add_track(P(-2.45, 7.045), P(2.45, 7.045), SIG_W, "F.Cu", "VCC")
+        self.add_via(*P(0.0, 7.045), net="VCC")
+        # GND: the two GND pads, out to 8.545, plus all four shell legs.  The
+        # shell legs sit in front of the pad row (negative d, towards the
+        # board edge): the front pair is level with the pad row and the rear
+        # pair 4.18 mm nearer the edge.  One vertical per side ties both legs
+        # of that side together and a short link joins the front leg to the
+        # wide GND pad.
+        for sx in (-1, 1):
+            self.add_track(P(sx * 3.25, 0.0), P(sx * 3.25, 8.545),
+                           SIG_W, "F.Cu", "GND")
+            self.add_track(P(sx * 4.32, -5.095), P(sx * 4.32, -0.915),
+                           SIG_W, "F.Cu", "GND")
+            self.add_track(P(sx * 4.32, -0.3), P(sx * 3.25, -0.3),
+                           SIG_W, "F.Cu", "GND")
+        self.add_track(P(-3.25, 8.545), P(3.25, 8.545), SIG_W, "F.Cu", "GND")
+
+    def usbc_entry(self, net):
+        """Where the maze router picks a USB-C net up (point, layer)."""
+        if net == self.dplus:            # D+ joined on B.Cu, second via
+            return self._usbc_pt(1.6, 2.545), "B.Cu"
+        if net == self.dminus:           # D- joined on F.Cu at 5.045
+            return self._usbc_pt(-0.2, 5.045), "F.Cu"
+        if net == "VCC":
+            return self._usbc_pt(0.0, 7.045), "B.Cu"
+        return self._usbc_pt(0.0, 8.545), "F.Cu"
 
     # -------------------------------------------------------------- the truss
     # ------------------------------------------------------------ via placing
@@ -439,6 +546,15 @@ class Board:
         a('\t\t(uuid "%s")' % u())
         a("\t\t(effects (font (size 2 2) (thickness 0.3)))")
         a("\t)")
+        for tx in self.texts:
+            a("\t(gr_text \"%s\"" % tx["text"])
+            a("\t\t(at %s %s %s)" % (num(tx["x"]), num(tx["y"]),
+                                      num(tx.get("angle", 0.0))))
+            a('\t\t(layer "%s")' % tx["layer"])
+            a('\t\t(uuid "%s")' % u())
+            a("\t\t(effects (font (size %s %s) (thickness 0.2)))"
+              % (num(tx["size"]), num(tx["size"])))
+            a("\t)")
         for tr in self.tracks:
             a("\t(segment")
             a("\t\t(start %s %s)" % (num(tr.a[0]), num(tr.a[1])))
@@ -501,14 +617,16 @@ class Board:
         silk = "F.SilkS" if fp.side == "F" else "B.SilkS"
         fab = "F.Fab" if fp.side == "F" else "B.Fab"
         just = "" if fp.side == "F" else " (justify mirror)"
+        rref = getattr(fp, "ref_at", None) or (0.0, -10.2)
+        rval = getattr(fp, "val_at", None) or (0.0, 10.2)
         a('\t\t(property "Reference" "%s"' % fp.ref)
-        a("\t\t\t(at 0 -10.2 0)")
+        a("\t\t\t(at %s %s 0)" % (num(rref[0]), num(rref[1])))
         a('\t\t\t(layer "%s")' % silk)
         a('\t\t\t(uuid "%s")' % u())
         a("\t\t\t(effects (font (size 1 1) (thickness 0.15))%s)" % just)
         a("\t\t)")
         a('\t\t(property "Value" "%s"' % fp.value.replace('"', "'"))
-        a("\t\t\t(at 0 10.2 0)")
+        a("\t\t\t(at %s %s 0)" % (num(rval[0]), num(rval[1])))
         a('\t\t\t(layer "%s")' % fab)
         a('\t\t\t(uuid "%s")' % u())
         a("\t\t\t(effects (font (size 1 1) (thickness 0.15))%s)" % just)

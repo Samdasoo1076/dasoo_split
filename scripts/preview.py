@@ -44,17 +44,21 @@ def render(board, path, scale=4.0, labels=True, region=None):
     def P(x, y):
         return ((x - x0) * scale + 10, (y - y0) * scale + 10)
 
-    # front silkscreen first, so copper sits on top of it
+    # front silkscreen first, so copper sits on top of it.  Footprint graphics
+    # are local, so every point goes through the placement (parts such as the
+    # USB-C link port are placed turned 180 degrees).
     for fp in board.fps:
         for g in fp.graphics:
             if g[3] != "F.SilkS":
                 continue
             if g[0] == "line":
-                d.line([P(*g[1]), P(*g[2])], fill=(96, 96, 100),
-                       width=max(1, int(g[4] * scale)))
+                d.line([P(*place(fp.px, fp.py, g[1][0], g[1][1], fp.ang, fp.side)),
+                        P(*place(fp.px, fp.py, g[2][0], g[2][1], fp.ang, fp.side))],
+                       fill=(96, 96, 100), width=max(1, int(g[4] * scale)))
             elif g[0] == "circle":
                 (cx, cy), r = g[1], g[2][1]
-                a, b = P(cx - r, cy - r), P(cx + r, cy + r)
+                a, b = (P(*place(fp.px, fp.py, cx - r, cy - r, fp.ang, fp.side)),
+                        P(*place(fp.px, fp.py, cx + r, cy + r, fp.ang, fp.side)))
                 d.ellipse([a[0], a[1], b[0], b[1]], outline=(96, 96, 100),
                           width=max(1, int(g[4] * scale)))
 
