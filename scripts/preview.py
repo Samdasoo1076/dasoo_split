@@ -116,6 +116,17 @@ def render(board, path, scale=4.0, labels=True, region=None):
             fill = (250, 230, 150) if k["kind"] == "encoder" else (225, 225, 225)
             d.text((cx - w / 2, cy - font.size * 0.7), txt, font=font, fill=fill)
 
+    # board level silkscreen text (the LINK ONLY marking of the USB-C port)
+    for tx in getattr(board, "texts", []):
+        f = _font(max(6, int(tx["size"] * scale)))
+        tw = d.textlength(tx["text"], font=f)
+        tile = Image.new("RGBA", (int(tw) + 6, f.size + 8), (0, 0, 0, 0))
+        ImageDraw.Draw(tile).text((3, 3), tx["text"], font=f, fill=(225, 225, 225))
+        if tx.get("angle"):
+            tile = tile.rotate(tx["angle"], expand=True)
+        c = P(tx["x"], tx["y"])
+        img.paste(tile, (int(c[0] - tile.width / 2), int(c[1] - tile.height / 2)), tile)
+
     a, b = P(x0, y0), P(x1, y1)
     d.rectangle([a[0], a[1], b[0], b[1]], outline=(120, 220, 120), width=2)
     title = "choc-split-60 %s  -  %d keys" % (board.hand, len(board.keys))
