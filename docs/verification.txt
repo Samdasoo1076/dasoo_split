@@ -63,8 +63,9 @@ Via in pad - none
   Every diode cathode used to have its 0.6/0.3 mm via in the middle of the
   1.3 x 1.5 mm cathode pad (solder wicks down the barrel, the pad can lift when
   a hot swap socket is pulled).  The via is now 0.45 mm outside the pad, on the
-  row bus, joined by a short cathode track.  100 vias checked against every pad
-  and hole: nearest copper 0.642 mm, 0 pads or holes closer than 0.30 mm.
+  row bus, joined by a short cathode track.  100 vias (72 cathode vias plus 28
+  from the router) checked against every pad and hole: nearest copper
+  0.642 mm, 0 pads or holes closer than 0.30 mm.
 
 Diode - clear of the hot swap socket of the key below
   Sod-123 at key centre x +6.75 / y +6.5 (plain key) or mirrored at x +8.04 /
