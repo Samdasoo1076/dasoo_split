@@ -13,7 +13,12 @@ import numpy as np
 SIG = 0.25
 PWR = 0.5
 CLEAR = 0.2
-CUT_CLEAR = 0.50        # copper to a board cutout edge (Edge.Cuts)
+# copper to a board cutout edge (Edge.Cuts).  The mask is stamped 0.70 from the
+# cutout, so a 0.25 mm track that keeps its centre on a free cell still leaves
+# 0.70 - 0.125 = 0.575 mm of copper to the cutout: enough for KiCad's default
+# 0.5 mm copper_edge_clearance (at 0.50 the copper came as close as 0.40 and
+# the default-rule DRC reported 8 violations per half).
+CUT_CLEAR = 0.70
 VIA_D = 0.6
 VIA_DRILL = 0.3
 

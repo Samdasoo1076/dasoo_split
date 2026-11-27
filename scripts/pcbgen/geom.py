@@ -10,13 +10,16 @@ def place(px, py, lx, ly, ang=0.0, side="F"):
     """Transform a local footprint coordinate to board coordinates.
 
     KiCad convention: positive angle rotates counter clockwise on screen
-    (y grows downwards in the file), and a footprint placed on the back side is
-    mirrored about its local Y axis before the rotation is applied.
+    (y grows downwards in the file).  A footprint placed on the back side is
+    *not* mirrored on load: the local frame of the file is the frame of the
+    part as it sits on the board, so a pad written at local -1.75 lands at
+    px - 1.75 exactly as on the front.  (Mirroring happens in the editor when
+    the footprint is flipped, in KiCad's own pad geometry check: a back side
+    footprint whose stored pads were mirrored lands 3.5 mm off its tracks and
+    the DRC reports shorting_items plus unconnected_items on every diode.)
     """
     a = math.radians(ang)
     c, s = math.cos(a), math.sin(a)
-    if side == "B":
-        lx = -lx
     return (px + lx * c + ly * s, py - lx * s + ly * c)
 
 

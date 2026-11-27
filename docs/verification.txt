@@ -1,11 +1,11 @@
-rev 2026-11-25 (9) - USB-C link port (TRRS removed), inner top edge, link only
+rev 2026-11-27 (10) - DRC fix: diodes on the row side, cutout clearance 0.70, U1 courtyard
 ======================================================================================
 
 $ python3 scripts/verify_pcb.py
 
 ======================================================================
 checking choc-split-60-left.kicad_pcb
-  pads=187 tracks=283 vias=48 nets=55
+  pads=187 tracks=281 vias=48 nets=55
   stabilizers=2 holes=8 cutouts=4 (nearest copper 1.815 mm)
     SW23  2.25u: 4/4 holes, nearest copper 0.325 mm (3.0 x 4.0 hole at 9.53, 74.91)
     SW33  2.00u: 4/4 holes, nearest copper 0.325 mm (3.0 x 4.0 hole at 88.11, 93.96)
@@ -15,12 +15,12 @@ checking choc-split-60-left.kicad_pcb
   USB-C link USB_C_Receptacle_HRO_TYPE-C-31-M-12: 20 pads centred (143.60, -19.77), pad row 7.23 mm inside the top edge (mouth at the edge), D+ ('TX',) / D- ('RX',)
 ======================================================================
 checking choc-split-60-right.kicad_pcb
-  pads=200 tracks=332 vias=62 nets=58
-  stabilizers=3 holes=12 cutouts=6 (nearest copper 1.630 mm)
+  pads=200 tracks=332 vias=64 nets=58
+  stabilizers=3 holes=12 cutouts=6 (nearest copper 1.983 mm)
     SW23  2.25u: 4/4 holes, nearest copper 0.325 mm (3.0 x 4.0 hole at 128.59, 55.87)
     SW33  2.25u: 4/4 holes, nearest copper 0.325 mm (3.0 x 4.0 hole at 38.09, 93.96)
     SW8   2.00u: 4/4 holes, nearest copper 0.325 mm (3.0 x 4.0 hole at 130.97, 17.77)
   OK: all checks passed
-  via in pad: 62 vias, nearest pad/hole 0.642 mm (via at 52.62, 39.27, hole SW19)
+  via in pad: 64 vias, nearest pad/hole 0.642 mm (via at 52.62, 39.27, hole SW19)
   diode to next row socket: nearest 4.550 mm (D28 to SW35)
   USB-C link USB_C_Receptacle_HRO_TYPE-C-31-M-12: 20 pads centred (-8.90, -19.77), pad row 7.23 mm inside the top edge (mouth at the edge), D+ ('RX',) / D- ('TX',)

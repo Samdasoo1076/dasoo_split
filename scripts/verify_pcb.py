@@ -320,7 +320,11 @@ def load(path):
             size = kid(pad, "size")
             w, h = fnum(size[1]), fnum(size[2])
             if side == "B":
-                lx = -lx
+                # KiCad keeps a back side footprint's stored frame unmirrored:
+                # the pad is written where it sits on the board.  Mirroring it
+                # here (as this checker used to) hides exactly the diode
+                # pad/track mismatch it is supposed to catch.
+                pass
             gx, gy = rot(lx, ly, pang)
             gx += px
             gy += py
@@ -421,8 +425,7 @@ def load(path):
             a = (fnum(st[1]), fnum(st[2]))
             c = (fnum(en[1]), fnum(en[2]))
             if side == "B":
-                a = (-a[0], a[1])
-                c = (-c[0], c[1])
+                pass          # no mirror on load, see the pad loop above
             a = (a[0] + px, a[1] + py)
             c = (c[0] + px, c[1] + py)
             b.cutout_lines.append((a, c))
@@ -485,6 +488,31 @@ def check_connectivity(b):
             if len([p for p in pads]) > 0:
                 errs.append("net %-6s split into %d groups (pad counts %s)"
                             % (net, len(comps), bad))
+    return errs
+
+
+def check_pad_track(b):
+    """No track may touch a pad of another net (a shorted pad).
+
+    check_clearance catches this as a clearance error, but a pad that a track
+    runs onto is the failure the KiCad DRC reports as shorting_items and it
+    deserves a message that says which pad and which net, not a distance.
+    """
+    errs = []
+    for t in b.tracks + b.vias:
+        if not t.net:
+            continue
+        for p in b.pads:
+            if not p.net or p.net == t.net or p.shape == "hole":
+                continue
+            if not set(t.layers) & set(p.layers):
+                continue
+            if not bbox_overlap(t.bbox, p.bbox):
+                continue
+            if item_dist(t, p, None) <= 0.001:
+                errs.append("track %s on %s touches %s.%s [%s] (short)"
+                            % (t.net, t.layers[0] if t.layers else "?",
+                               p.ref, p.num, p.net))
     return errs
 
 
@@ -965,6 +993,7 @@ def main(argv):
         if outline:
             errs += check_edge(b, outline)
         errs += check_clearance(b, outline)
+        errs += check_pad_track(b)
         errs += check_connectivity(b)
         errs += check_matrix(b)
         errs += check_zones(b)

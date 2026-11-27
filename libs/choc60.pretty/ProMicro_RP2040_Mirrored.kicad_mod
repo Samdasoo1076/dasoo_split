@@ -40,7 +40,7 @@
   (fp_line (start -17.81 4) (end -16.51 4)
     (stroke (width 0.15) (type solid)) (layer "F.SilkS") (uuid "a98eb4fd-a60e-4a4c-a437-1ce8297a4af0"))
   (fp_line (start -19.51 -4) (end -19.51 4)
-    (stroke (width 0.05) (type solid)) (layer "F.CrtYd") (uuid "cb6e3e53-0bc1-4219-a5c9-0e0ca606edd8"))
+    (stroke (width 0.1) (type solid)) (layer "F.SilkS") (uuid "cb6e3e53-0bc1-4219-a5c9-0e0ca606edd8"))
   (fp_circle (center 13.97 -5.4) (end 14.32 -5.4)
     (stroke (width 0.12) (type solid)) (fill no) (layer "F.SilkS") (uuid "db511ac1-50a0-4cdd-ac56-bc5b51136eed"))
   (pad "1" thru_hole circle (at 13.97 7.62) (size 1.75 1.75)

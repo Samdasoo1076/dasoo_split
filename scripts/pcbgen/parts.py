@@ -78,10 +78,9 @@ class Footprint:
             p = Pad(**p) if isinstance(p, dict) else p
             p.fp = self
             p.gx, p.gy = place(px, py, p.lx, p.ly, ang, side)
-            p.gang = ang - p.lang if side == "F" else ang + p.lang
-            # note: a mirrored pad's local rotation flips sign as well
-            if side == "B":
-                p.gang = ang + p.lang
+            # a back side footprint keeps its local frame (no mirror), so the
+            # pad's own rotation is simply added to the placement angle
+            p.gang = ang + p.lang
             p.glayers = tuple(BACK_MAP.get(l, l) if side == "B" else l
                               for l in p.layers)
             self.pads.append(p)
@@ -163,9 +162,16 @@ def choc_hotswap(width_u):
 
 
 def diode_sod123(kbar_right=False):
-    """SOD-123 diode.  ``kbar_right`` swaps the pads so that the part, when
-    placed on the back side (KiCad mirrors footprints there), keeps its
-    cathode pad on the left and the silkscreen band next to it."""
+    """SOD-123 diode.  ``kbar_right`` puts the cathode pad (pad 1) and the
+    silkscreen band on the right of the footprint origin.
+
+    The footprint sits on the back side and KiCad keeps a back side
+    footprint's stored coordinates unmirrored, so pad 1 lands where it is
+    written: ``kbar_right=False`` means cathode-left on the board.  The row net
+    follows the cathode, so the generator picks the flag from the placement and
+    the router reads the placed pad back instead of guessing a sign (see
+    Board.build_truss).
+    """
     kx = 1.75 if kbar_right else -1.75
     ax = -kx
     pads = [
@@ -231,7 +237,9 @@ def pro_micro_rp2040(mirror=False):
     g += [("line", (usb_x - 1.3, -4.0), (usb_x - 1.3, 4.0), "F.SilkS", 0.15),
           ("line", (usb_x - 1.3, -4.0), (usb_x, -4.0), "F.SilkS", 0.15),
           ("line", (usb_x - 1.3, 4.0), (usb_x, 4.0), "F.SilkS", 0.15),
-          ("line", (usb_x - 3.0, -4.0), (usb_x - 3.0, 4.0), "F.CrtYd", 0.05)]
+          # the connector outline outside the courtyard is silk: a lone
+          # segment on F.CrtYd makes KiCad report U1's courtyard as malformed
+          ("line", (usb_x - 3.0, -4.0), (usb_x - 3.0, 4.0), "F.SilkS", 0.1)]
     # pin 1 marker
     p1 = pads[0]
     g += [("circle", (p1["lx"] + 0.0, -5.4), ("r", 0.35), "F.SilkS", 0.12)]

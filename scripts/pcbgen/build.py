@@ -172,12 +172,14 @@ class Board:
             k["diode_mirror"] = mirror
             ddx = DIODE_DX_STAB if mirror else DIODE_DX
             ddy = DIODE_DY_STAB if mirror else DIODE_DY
-            # kbar_right flips the pads inside the footprint; the footprint sits
-            # on the back side, where KiCad mirrors local x, so kbar_right=True
-            # gives cathode-left and False gives cathode-right on the board
+            # kbar_right puts the cathode pad of the footprint on the right of
+            # its origin.  A back side footprint is not mirrored on load, so
+            # the pad lands on that side of the board as well: the plain keys
+            # keep the cathode left (towards the row bus) and the turned keys
+            # of the wide, stabilizer keys and the encoder keep it right.
             k["diode"] = self.add("diode", k["dref"], "1N4148W",
                                   k["cx"] + ddx, k["cy"] + ddy,
-                                  0.0, "B", kbar_right=not mirror)
+                                  0.0, "B", kbar_right=mirror)
             k["diode"].pad("1").net = k["row_net"]
             k["diode"].pad("2").net = k["knet"]
 
@@ -403,20 +405,18 @@ class Board:
         for k in self.keys:
             cx, cy = k["cx"], k["cy"]
             mirror = k["diode_mirror"]
-            ddy = DIODE_DY_STAB if mirror else DIODE_DY
-            # x of the cathode / anode pad centres on the board.  A back side
-            # footprint is mirrored in x, so the pads swap sides on the board
-            if mirror:      # kbar_right False: K at local -1.75 -> board +1.75
-                kx = cx + DIODE_DX_STAB + 1.75
-                ax = cx + DIODE_DX_STAB - 1.75
-            else:           # kbar_right True: K at local +1.75 -> board -1.75
-                kx = cx + DIODE_DX - 1.75
-                ax = cx + DIODE_DX + 1.75
-            ay = cy + ddy
+            # The diode's pads decide where the copper goes, never a sign
+            # convention: pad 1 is the cathode (row net) and pad 2 the anode
+            # (switch net), and both are read back from the placed footprint.
+            # A mismatch here is exactly what shorted every diode of the last
+            # board (see geom.place).
+            dp = k["diode"]
+            kx, ay = dp.pad("1").gx, dp.pad("1").gy
+            ax = dp.pad("2").gx
             if k["kind"] == "encoder":
                 # the switch terminals point down; S2 (x +2.5, y +7.0) goes
-                # right and up into the anode pad, which sits at +5.93 for the
-                # mirrored diode
+                # right and up into the anode pad, which sits at +6.29 for the
+                # turned (mirrored) diode
                 self.add_track((cx + 2.5, cy + 7.0), (ax, cy + 7.0),
                                SIG_W, "B.Cu", k["knet"])
                 self.add_track((ax, cy + 7.0), (ax, ay), SIG_W, "B.Cu", k["knet"])
@@ -427,7 +427,7 @@ class Board:
                                (cx + STUB_DX, ay), SIG_W, "B.Cu", k["knet"])
             else:
                 # turned switch of a stabilizer key: pad 2 sits at
-                # (cx + 3.8, cy + 8.5), the anode pad at (cx + 5.93, cy + 5.0),
+                # (cx + 3.8, cy + 8.5), the anode pad at (cx + 6.29, cy + 5.0),
                 # so the stub steps right once and comes up into the pad
                 self.add_track((cx + 3.8, cy + 8.5), (ax, cy + 8.5),
                                SIG_W, "B.Cu", k["knet"])
@@ -592,8 +592,8 @@ class Board:
             a("\t\t(polygon")
             a("\t\t\t(pts")
             a("\t\t\t\t(xy %s %s) (xy %s %s) (xy %s %s) (xy %s %s)"
-              % (num(x0 + 0.5), num(y0 + 0.5), num(x1 - 0.5), num(y0 + 0.5),
-                 num(x1 - 0.5), num(y1 - 0.5), num(x0 + 0.5), num(y1 - 0.5)))
+              % (num(x0 + 0.8), num(y0 + 0.8), num(x1 - 0.8), num(y0 + 0.8),
+                 num(x1 - 0.8), num(y1 - 0.8), num(x0 + 0.8), num(y1 - 0.8)))
             a("\t\t\t)")
             a("\t\t)")
             a("\t)")
